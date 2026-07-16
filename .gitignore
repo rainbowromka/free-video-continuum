@@ -1,1 +1,26 @@
-/target
+# Rust
+target/
+**/*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# FFmpeg binaries (если будем класть локально)
+ffmpeg/
+*.exe
+
+# База данных (локальная)
+*.db
+*.sqlite
+
+# Временные файлы
+tmp/
+temp/
