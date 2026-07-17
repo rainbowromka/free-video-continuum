@@ -15,6 +15,10 @@ impl Database {
         Ok(db)
     }
 
+    pub fn into_connection(self) -> Connection {
+        self.conn
+    }
+
     fn ensure_schema_version_table(&self) -> Result<()> {
         self.conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS schema_version (
