@@ -1,18 +1,25 @@
+mod db;
+
 use actix_web::{web, App, HttpServer, HttpResponse};
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 use tracing_actix_web::TracingLogger;
 
+use db::Database;
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Инициализация логирования
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info")))
+        .with(EnvFilter::new("info"))
         .with(tracing_subscriber::fmt::layer())
         .init();
 
     info!("Запуск Free Video Continuum Server...");
+
+    let _db = Database::open("continuum.db")
+        .expect("Не удалось открыть базу данных");
+    info!("База данных открыта");    
 
     info!("Сервер запущен на http://127.0.0.1:9090");
 
