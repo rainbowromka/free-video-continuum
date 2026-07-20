@@ -35,6 +35,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(TracingLogger::default())
             .route("/health", web::get().to(health_check))
             .route("/api/admin/disks", web::post().to(api::disks::add_disk))
+            .route("/api/admin/disks", web::get().to(api::disks::list_disks))
     })
     .bind("127.0.0.1:9090")?
     .run()

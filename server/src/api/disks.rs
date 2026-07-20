@@ -26,3 +26,29 @@ pub async fn add_disk(
         })),
     }
 }
+
+pub async fn list_disks(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+
+    match crate::db::disks::list_all(&conn) {
+        Ok(disks) => {
+            let result: Vec<serde_json::Value> = disks
+                .iter()
+                .map(|d| serde_json::json!({
+                    "disk_id": d.disk_id,
+                    "label": d.label,
+                    "mount_path": d.mount_path,
+                    "disk_type": d.disk_type,
+                    "is_available": d.is_available,
+                }))
+                .collect();
+
+            HttpResponse::Ok().json(result)
+        }
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": e.to_string()
+        })),
+    }
+}
