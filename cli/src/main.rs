@@ -62,13 +62,13 @@ async fn main() {
             match path {
                 Some(p) => {
                     println!("Добавление диска: {}", p);
-                    match client::add_disk(&p, &p, "physical").await {
+                    match client::add_disk(&p, &p, "fixed").await {
                         Ok(resp) => println!("[OK] Диск зарегистрирован: {} ({})", resp.disk_id, resp.message),
                         Err(e) => eprintln!("[ERROR] {}", e),
                     }
                 }
                 None => {
-                    println!("Интерактивный мастер — в разработке");
+                    interactive::add_disk_wizard().await;
                 }
             }
         }

@@ -14,7 +14,7 @@ pub async fn add_disk(
     req: web::Json<AddDiskRequest>,
 ) -> HttpResponse {
     let conn = conn.lock().unwrap();
-    let disk_type = req.disk_type.as_deref().unwrap_or("physical");
+    let disk_type = req.disk_type.as_deref().unwrap_or("fixed");
 
     match crate::db::disks::insert(&conn, &req.label, &req.mount_path, disk_type) {
         Ok(disk_id) => HttpResponse::Created().json(serde_json::json!({

@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS disks (
     disk_id TEXT PRIMARY KEY,
     label TEXT NOT NULL,
     mount_path TEXT,
-    disk_type TEXT DEFAULT 'physical',
+    disk_type TEXT DEFAULT 'fixed',
     is_available INTEGER DEFAULT 0,
     last_seen_at TEXT,
     created_at TEXT DEFAULT (datetime('now')),
