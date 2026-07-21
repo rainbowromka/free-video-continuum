@@ -14,3 +14,6 @@ tracing-actix-web = "0.7"
 uuid = { version = "1", features = ["v4"] }
 shared = { path = "../shared" }
 rusqlite = { version = "0.40.1", features = ["bundled"] }
+enable-ansi-support = "0.3.1"
+tokio = { version = "1", features = ["time"] }
+

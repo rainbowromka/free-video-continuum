@@ -64,4 +64,8 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn conn_ref(&self) -> &Connection {
+        &self.conn
+    }
 }

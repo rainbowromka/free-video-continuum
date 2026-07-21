@@ -60,4 +60,22 @@ pub fn list_all(conn: &Connection) -> Result<Vec<Disk>> {
     Ok(disks)
 }
 
-// pub fn list_all, update_availability, delete — позже
+pub fn update_availability(
+    conn: &Connection,
+    disk_id: &str,
+    available: bool,
+    new_path: Option<&str>,
+) -> Result<()> {
+    if let Some(path) = new_path {
+        conn.execute(
+            "UPDATE disks SET is_available = ?1, mount_path = ?2, last_seen_at = datetime('now'), updated_at = datetime('now') WHERE disk_id = ?3",
+            params![available as i32, path, disk_id],
+        )?;
+    } else {
+        conn.execute(
+            "UPDATE disks SET is_available = ?1, last_seen_at = datetime('now'), updated_at = datetime('now') WHERE disk_id = ?2",
+            params![available as i32, disk_id],
+        )?;
+    }
+    Ok(())
+}

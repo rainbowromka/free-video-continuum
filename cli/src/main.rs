@@ -2,6 +2,7 @@ mod client;
 mod interactive;
 
 use clap::{Parser, Subcommand};
+use reqwest::Response;
 
 #[derive(Parser)]
 #[command(name = "continuum")]
@@ -33,6 +34,8 @@ enum Commands {
 enum DiskCommands {
     /// Список дисков
     Ls,
+    /// Проверить доступность дисков
+    Check,
 }
 
 fn print_disks(disks: &[client::DiskInfo]) {
@@ -76,6 +79,12 @@ async fn main() {
             DiskCommands::Ls => {
                 match client::list_disks().await {
                     Ok(disks) => print_disks(&disks),
+                    Err(e) => eprintln!("[ERROR] {}", e),
+                }
+            }
+            DiskCommands::Check => {
+                match client::check_disks().await {
+                    Ok(msg) => println!("[OK] {}", msg),
                     Err(e) => eprintln!("[ERROR] {}", e),
                 }
             }

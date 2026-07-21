@@ -1,6 +1,5 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::env;
 
 const DEFAULT_SERVER_URL: &str = "http://127.0.0.1:9090";
 
@@ -90,6 +89,26 @@ pub async fn list_disks() -> Result<Vec<DiskInfo>, String> {
             .json::<Vec<DiskInfo>>()
             .await
             .map_err(|e| format!("Ошибка чтения ответа: {}", e))
+    } else {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        Err(format!("Ошибка сервера ({}): {}", status, body))
+    }
+}
+
+pub async fn check_disks() -> Result<String, String> {
+    let url = format!("{}/api/admin/disks/check", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения к серверу: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
     } else {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
