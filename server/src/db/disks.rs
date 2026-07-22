@@ -40,6 +40,24 @@ pub fn find_by_path(conn: &Connection, mount_path: &str) -> Result<Option<Disk>>
     .optional()
 }
 
+pub fn find_by_id(conn: &Connection, disk_id: &str) -> Result<Option<Disk>> {
+    conn.query_row(
+        "SELECT disk_id, label, mount_path, disk_type, is_available
+         FROM disks WHERE disk_id = ?1",
+        params![disk_id],
+        |row| {
+            Ok(Disk {
+                disk_id: row.get(0)?,
+                label: row.get(1)?,
+                mount_path: row.get(2)?,
+                disk_type: row.get(3)?,
+                is_available: row.get::<_, i32>(4)? != 0,
+            })
+        },
+    )
+    .optional() 
+}
+
 pub fn list_all(conn: &Connection) -> Result<Vec<Disk>> {
     let mut stmt = conn.prepare(
         "SELECT disk_id, label, mount_path, disk_type, is_available

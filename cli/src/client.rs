@@ -115,3 +115,26 @@ pub async fn check_disks() -> Result<String, String> {
         Err(format!("Ошибка сервера ({}): {}", status, body))
     }
 }
+
+pub async fn add_media_root(disk_id: &str, relative_path: &str) -> Result<String, String> {
+    let url = format!("{}/api/admin/disks/{}/media-roots", server_url(), disk_id);
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "relative_path": relative_path
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения к серверу: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        Err(format!("Ошибка сервера ({}): {}", status, body))
+    }
+}

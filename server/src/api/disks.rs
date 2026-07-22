@@ -80,3 +80,38 @@ pub async fn check_disks(
         })),
     }
 }
+
+#[derive(Deserialize)]
+pub struct AddMediaRootRequest {
+    pub relative_path: String,
+}
+
+pub async fn add_media_root(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    path: web::Path<String>,
+    req: web::Json<AddMediaRootRequest>,
+) -> HttpResponse {
+    let disk_id = path.into_inner();
+    let conn = conn.lock().unwrap();
+
+    // Проверяем, что диск существует
+    match crate::db::disks::find_by_id(&conn, &disk_id) {
+        Ok(Some(_)) => {}
+        Ok(None) => return HttpResponse::NotFound().json(serde_json::json!({
+            "error": "Диск не найден"
+        })),
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": e.to_string()
+        })),
+    }
+
+    match crate::db::media_roots::insert(&conn, &disk_id, &req.relative_path) {
+        Ok(id) => HttpResponse::Created().json(serde_json::json!({
+            "id": id,
+            "message": "Медиа-папка добавлена"
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": e.to_string()
+        })),
+    }
+}

@@ -2,7 +2,6 @@ mod client;
 mod interactive;
 
 use clap::{Parser, Subcommand};
-use reqwest::Response;
 
 #[derive(Parser)]
 #[command(name = "continuum")]
@@ -36,6 +35,13 @@ enum DiskCommands {
     Ls,
     /// Проверить доступность дисков
     Check,
+    /// Добавить медиа-папку к диску
+    AddMedia {
+        /// ID диска
+        disk_id: String,
+        /// Относительный путь к папке с медиа (например "My Video")
+        path: String,
+    },
 }
 
 fn print_disks(disks: &[client::DiskInfo]) {
@@ -84,6 +90,12 @@ async fn main() {
             }
             DiskCommands::Check => {
                 match client::check_disks().await {
+                    Ok(msg) => println!("[OK] {}", msg),
+                    Err(e) => eprintln!("[ERROR] {}", e),
+                }
+            }
+            DiskCommands::AddMedia {disk_id, path} => {
+                match client::add_media_root(&disk_id, &path).await {
                     Ok(msg) => println!("[OK] {}", msg),
                     Err(e) => eprintln!("[ERROR] {}", e),
                 }
