@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS disks (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS media_roots (
+CREATE TABLE IF NOT EXISTS roots (
     id TEXT PRIMARY KEY,
     disk_id TEXT NOT NULL REFERENCES disks(disk_id),
     relative_path TEXT NOT NULL,

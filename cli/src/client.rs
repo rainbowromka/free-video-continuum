@@ -17,7 +17,7 @@ pub struct AddDiskResponse {
 }
 
 fn server_url() -> String {
-      // TODO: в будущем читать из файла конфигурации
+    // TODO: в будущем читать из файла конфигурации
     DEFAULT_SERVER_URL.to_string()
 }
 
@@ -116,25 +116,44 @@ pub async fn check_disks() -> Result<String, String> {
     }
 }
 
-pub async fn add_media_root(disk_id: &str, relative_path: &str) -> Result<String, String> {
-    let url = format!("{}/api/admin/disks/{}/media-roots", server_url(), disk_id);
+pub async fn add_root(disk_id: &str, relative_path: &str) -> Result<String, String> {
+    let url = format!("{}/api/admin/roots", server_url());
     let client = Client::new();
 
     let response = client
         .post(&url)
         .json(&serde_json::json!({
+            "disk_id": disk_id,
             "relative_path": relative_path
         }))
         .send()
         .await
-        .map_err(|e| format!("Ошибка подключения к серверу: {}", e))?;
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
 
     if response.status().is_success() {
         let body = response.text().await.unwrap_or_default();
         Ok(body)
     } else {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        Err(format!("Ошибка сервера ({}): {}", status, body))
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+pub async fn search_disks(contains: &str) -> Result<Vec<DiskInfo>, String> {
+    let url = format!("{}/api/admin/disks?search={}", server_url(), contains);
+    let client = Client::new();
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        response
+            .json::<Vec<DiskInfo>>()
+            .await
+            .map_err(|e| format!("Ошибка чтения: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
     }
 }

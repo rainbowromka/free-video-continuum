@@ -2,6 +2,8 @@ use rusqlite::{Connection, Result, params};
 use uuid::Uuid;
 use rusqlite::OptionalExtension;
 
+use crate::api::disks;
+
 pub struct Disk {
     pub disk_id: String,
     pub label: String,
@@ -96,4 +98,27 @@ pub fn update_availability(
         )?;
     }
     Ok(())
+}
+
+pub fn search(conn: &Connection, contains: &str) -> Result<Vec<Disk>> {
+    let pattern = format!("%{}%", contains);
+    let mut stmt = conn.prepare(
+        "SELECT disk_id, label, mount_path, disk_type, is_available
+         FROM disks
+         WHERE disk_id LIKE ?1 OR label LIKE ?1
+         ORDER BY label"
+    )?;
+
+    let disks = stmt.query_map(params![pattern], |row| {
+        Ok(Disk {
+            disk_id: row.get(0)?,
+            label: row.get(1)?,
+            mount_path: row.get(2)?,
+            disk_type: row.get(3)?,
+            is_available: row.get::<_, i32>(4)? != 0,
+        })
+    })?
+    .collect::<Result<Vec<_>>>()?;
+
+    Ok(disks)
 }

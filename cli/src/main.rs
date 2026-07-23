@@ -27,6 +27,9 @@ enum Commands {
     Catalog,
     /// Показать статус
     Status,
+    /// Управление медиа-папками (roots)
+    #[command(subcommand)]
+    Roots(RootsCommands),
 }
 
 #[derive(Subcommand)]
@@ -35,12 +38,16 @@ enum DiskCommands {
     Ls,
     /// Проверить доступность дисков
     Check,
+}
+
+#[derive(Subcommand)]
+enum RootsCommands {
     /// Добавить медиа-папку к диску
-    AddMedia {
-        /// ID диска
-        disk_id: String,
-        /// Относительный путь к папке с медиа (например "My Video")
-        path: String,
+    Add {
+        /// Подстрока для поиска диска (по ID или label)
+        contains: Option<String>,
+        /// Относительный путь к папке (если не указан - интерактивный режим)
+        path: Option<String>,
     },
 }
 
@@ -94,12 +101,6 @@ async fn main() {
                     Err(e) => eprintln!("[ERROR] {}", e),
                 }
             }
-            DiskCommands::AddMedia {disk_id, path} => {
-                match client::add_media_root(&disk_id, &path).await {
-                    Ok(msg) => println!("[OK] {}", msg),
-                    Err(e) => eprintln!("[ERROR] {}", e),
-                }
-            }
         },
         Commands::Ls => {
             match client::list_disks().await {
@@ -113,5 +114,36 @@ async fn main() {
         Commands::Status => {
             println!("Статус — в разработке");
         }
+        Commands::Roots(cmd) => match cmd {
+            RootsCommands::Add { contains, path } => {
+                match (contains, path) {
+                    (Some(contains), Some(path)) => {
+                        match client::search_disks(&contains).await {
+                            Ok(disks) if disks.len() == 1 => {
+                                let disk = &disks[0];
+                                match client::add_root(&disk.disk_id, &path).await {
+                                    Ok(msg) => println!("[OK] {}", msg),
+                                    Err(e) => eprintln!("[ERROR] {}", e),
+                                }
+                            }
+                            Ok(disks) if disks.is_empty() => {
+                                eprintln!("[ERROR] Диск не найден по '{}'", contains);
+                            }
+                            Ok(disks) => {
+                                println!("Найдено несколько дисков:");
+                                for d in &disks {
+                                    println!("  {} - {}", d.disk_id, d.label);
+                                }
+                                eprintln!("[ERROR] Уточните запрос");
+                            }
+                            Err(e) => eprintln!("[ERROR] {}", e),
+                        }
+                    }
+                    _ => {
+                        println!("Интерактивный режим roots add — в разработке");
+                    }
+                }
+            }
+        },
     }
 }
