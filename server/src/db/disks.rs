@@ -60,6 +60,30 @@ pub fn find_by_id(conn: &Connection, disk_id: &str) -> Result<Option<Disk>> {
     .optional() 
 }
 
+pub fn exists_by_path(conn: &Connection, mount_path: &str) -> Result<bool> {
+    let normalized = normalize_path(mount_path);
+    
+    // Ищем как точное совпадение, так и вариации
+    let exists: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM disks WHERE mount_path = ?1",
+        params![normalized],
+        |row| row.get(0),
+    )?;
+    Ok(exists)
+}
+
+fn normalize_path(path: &str) -> String {
+    let trimmed = path.trim_end_matches(['\\', '/']).to_string();
+     #[cfg(target_os = "windows")]
+    {
+        // На Windows приводим букву диска к верхнему регистру
+        if trimmed.len() == 2 && trimmed.ends_with(':') {
+            return trimmed.to_uppercase() + "\\";
+        }
+    }
+    trimmed
+}
+
 pub fn list_all(conn: &Connection) -> Result<Vec<Disk>> {
     let mut stmt = conn.prepare(
         "SELECT disk_id, label, mount_path, disk_type, is_available

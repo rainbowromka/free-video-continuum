@@ -37,3 +37,12 @@ pub fn list_by_disk(conn: &Connection, disk_id: &str) -> Result<Vec<Root>> {
 
     Ok(roots)
 }
+
+pub fn exists(conn: &Connection, disk_id: &str, relative_path: &str) -> Result<bool> {
+    let exists: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM roots WHERE disk_id = ?1 AND relative_path = ?2",
+        params![disk_id, relative_path],
+        |row| row.get(0),
+    )?;
+    Ok(exists)
+}

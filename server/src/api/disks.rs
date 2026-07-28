@@ -15,11 +15,18 @@ pub async fn add_disk(
 ) -> HttpResponse {
     let conn = conn.lock().unwrap();
     let disk_type = req.disk_type.as_deref().unwrap_or("fixed");
+    let mount_path = normalize_path(&req.mount_path);
 
-    match crate::db::disks::insert(&conn, &req.label, &req.mount_path, disk_type) {
+    if crate::db::disks::exists_by_path(&conn, &mount_path).unwrap_or(false) {
+        return HttpResponse::Conflict().json(serde_json::json!({
+            "error": "Диск с таким путём уже зарегистрирован"
+        }));
+    }    
+
+    match crate::db::disks::insert(&conn, &req.label, &mount_path, disk_type) {
         Ok(disk_id) => {
             if disk_type == "removable" {
-                if let Err(e) = crate::storage::disks::write_marker(&req.mount_path, &disk_id) {
+                if let Err(e) = crate::storage::disks::write_marker(&mount_path, &disk_id) {
                     return HttpResponse::InternalServerError().json(serde_json::json!({
                         "error": format!("Диск зарегистрирован, но не удалось создать маркер: {}", e)
                     }));
@@ -35,6 +42,19 @@ pub async fn add_disk(
             "error": e.to_string()
         })),
     }
+}
+
+fn normalize_path(path: &str) -> String {
+    let trimmed = path.trim_end_matches(['\\', '/']).to_string();
+    
+    #[cfg(target_os = "windows")]
+    {
+        // Windows: приводим букву диска к верхнему регистру, добавляем слэш
+        if trimmed.len() == 2 && trimmed.ends_with(':') {
+            return trimmed.to_uppercase() + "\\";
+        }
+    }
+    trimmed
 }
 
 pub async fn list_disks(
@@ -82,6 +102,12 @@ pub async fn add_root(
         Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({
             "error": e.to_string()
         })),
+    }
+
+    if crate::db::roots::exists(&conn, &req.disk_id, &req.relative_path).unwrap_or(false) {
+        return HttpResponse::Conflict().json(serde_json::json!({
+            "error": "Медиа-папка уже добавлена к этому диску"
+        }));
     }
 
     match crate::db::roots::insert(&conn, &req.disk_id, &req.relative_path) {
@@ -151,4 +177,34 @@ fn list_disks_internal(conn: &Connection) -> Result<Vec<serde_json::Value>, Stri
                 .collect()
         })
         .map_err(|e| e.to_string())
+}
+
+#[derive(Deserialize)]
+pub struct RootsQuery {
+    pub disk_id: String,
+}
+
+pub async fn list_roots(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    query: web::Query<RootsQuery>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+
+    match crate::db::roots::list_by_disk(&conn, &query.disk_id) {
+        Ok(roots) => {
+            let result: Vec<serde_json::Value> = roots
+                .iter()
+                .map(|r| serde_json::json!({
+                    "id": r.id,
+                    "disk_id": r.disk_id,
+                    "relative_path": r.relative_path,
+                }))
+                .collect();
+
+            HttpResponse::Ok().json(result)
+        }
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": e.to_string()
+        })),
+    }
 }

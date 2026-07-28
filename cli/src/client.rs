@@ -157,3 +157,35 @@ pub async fn search_disks(contains: &str) -> Result<Vec<DiskInfo>, String> {
         Err(format!("Ошибка сервера: {}", response.status()))
     }
 }
+
+pub async fn find_disk_by_path(mount_path: &str) -> Option<DiskInfo> {
+    let disks = list_disks().await.ok()?;
+    disks.into_iter().find(|d| d.mount_path == mount_path)
+}
+
+#[derive(Deserialize)]
+pub struct RootInfo {
+    pub id: String,
+    pub disk_id: String,
+    pub relative_path: String,
+}
+
+pub async fn list_roots(disk_id: &str) -> Result<Vec<RootInfo>, String> {
+    let url = format!("{}/api/admin/roots?disk_id={}", server_url(), disk_id);
+    let client = Client::new();
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        response
+            .json::<Vec<RootInfo>>()
+            .await
+            .map_err(|e| format!("Ошибка чтения: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
