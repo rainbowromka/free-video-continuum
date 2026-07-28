@@ -49,6 +49,11 @@ enum RootsCommands {
         /// Относительный путь к папке (если не указан - интерактивный режим)
         path: Option<String>,
     },
+    /// Список медиа-папок диска
+    Ls {
+        /// Подстрока для поиска диска (по ID или label)
+        contains: String,
+    },
 }
 
 fn print_disks(disks: &[client::DiskInfo]) {
@@ -140,10 +145,42 @@ async fn main() {
                         }
                     }
                     _ => {
-                        println!("Интерактивный режим roots add — в разработке");
+                        interactive::add_root_wizard().await;
                     }
                 }
-            }
+            },
+            RootsCommands::Ls { contains } => {
+                match client::search_disks(&contains).await {
+                    Ok(disks) if disks.len() == 1 => {
+                        let disk = &disks[0];
+                        match client::list_roots(&disk.disk_id).await {
+                            Ok(roots) => {
+                                if roots.is_empty() {
+                                    println!("Нет медиа-папок для диска '{}'", disk.label);
+                                } else {
+                                    println!("Диск: {} ({})", disk.label, disk.disk_id);
+                                    println!("{:<36} {:<30}", "ID", "PATH");
+                                    println!("{}", "-".repeat(66));
+                                    for r in &roots {
+                                        println!("{:<36} {:<30}", r.id, r.relative_path);
+                                    }
+                                }
+                            }
+                            Err(e) => eprintln!("[ERROR] {}", e),
+                        }
+                    }
+                    Ok(disks) if disks.is_empty() => {
+                        eprintln!("[ERROR] Диск не найден по '{}'", contains);
+                    }
+                    Ok(disks) => {
+                        println!("Найдено несколько дисков, уточните:");
+                        for d in &disks {
+                            println!("  {} - {}", d.disk_id, d.label);
+                        }
+                    }
+                    Err(e) => eprintln!("[ERROR] {}", e),
+                }
+            },
         },
     }
 }

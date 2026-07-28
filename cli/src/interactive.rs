@@ -1,13 +1,20 @@
 use dialoguer::{Confirm, Input, Select};
 use std::env;
+use std::path::{Path, PathBuf};
 
 pub async fn add_disk_wizard() {
     println!("=== Мастер добавления диска ===\n");
 
     // Шаг 1: определяем путь
     let current_dir = env::current_dir().unwrap_or_default();
-    println!("Текущая папка: {}", current_dir.display());
 
+    // Проверяем, не зарегистрирована ли уже текущая папка
+    if crate::client::find_disk_by_path(&current_dir.to_string_lossy()).await.is_some() {
+        eprintln!("[ERROR] Текущая папка '{}' уже зарегистрирована как диск", current_dir.display());
+        return;
+    }
+
+    println!("Текущая папка: {}", current_dir.display());
     let use_current = Confirm::new()
         .with_prompt("Использовать эту папку?")
         .default(true)
@@ -22,6 +29,12 @@ pub async fn add_disk_wizard() {
             .interact_text()
             .unwrap()
     };
+
+    // Проверяем, не зарегистрирован ли уже этот путь
+    if crate::client::find_disk_by_path(&mount_path).await.is_some() {
+        eprintln!("[ERROR] Диск с путём '{}' уже зарегистрирован", mount_path);
+        return;
+    }
 
     // Шаг 2: название диска
     let default_label = std::path::Path::new(&mount_path)
@@ -70,5 +83,106 @@ pub async fn add_disk_wizard() {
         }
     } else {
         println!("Отмена.");
+    }
+}
+
+fn find_disk_by_marker(current_dir: &Path) -> Option<(String, PathBuf)> {
+    let mut dir = current_dir.to_path_buf();
+    
+    loop {
+        let marker = dir.join(".continuum-disk");
+        if marker.exists() {
+            // Читаем disk_id из маркера
+            let content = std::fs::read_to_string(&marker).ok()?;
+            let parsed: serde_json::Value = serde_json::from_str(&content).ok()?;
+            let disk_id = parsed.get("disk_id")?.as_str()?.to_string();
+            return Some((disk_id, dir));
+        }
+        
+        // Поднимаемся на уровень выше
+        if !dir.pop() {
+            // Достигли корня
+            break;
+        }
+    }
+    
+    None
+}
+
+pub async fn add_root_wizard() {
+    println!("=== Мастер добавления медиа-папки ===\n");
+
+    let current_dir = env::current_dir().unwrap_or_default();
+    println!("Текущая папка: {}", current_dir.display());
+
+    // Шаг 1: ищем диск по маркеру
+    if let Some((disk_id, mount_path)) = find_disk_by_marker(&current_dir) {
+        println!("Найден диск: {}", mount_path.display());
+        
+        // Определяем relative_path
+        let relative_path = current_dir
+            .strip_prefix(&mount_path)
+            .unwrap_or(&current_dir)
+            .to_string_lossy()
+            .to_string();
+        
+        if relative_path.is_empty() {
+            eprintln!("[ERROR] Нельзя добавить корень диска как медиа-папку");
+            return;
+        }
+        
+        println!("Относительный путь: {}", relative_path);
+        
+        // TODO: проверка дубликата и отправка
+        match crate::client::add_root(&disk_id, &relative_path).await {
+            Ok(msg) => println!("[OK] {}", msg),
+            Err(e) => eprintln!("[ERROR] {}", e),
+        }
+        return;
+    }
+
+    // Шаг 2: не нашли маркер — ищем среди fixed дисков
+    match crate::client::list_disks().await {
+        Ok(disks) => {
+            let mut candidates: Vec<_> = disks
+                .iter()
+                .filter(|d| d.disk_type == "fixed" && d.is_available)
+                .filter(|d| current_dir.to_string_lossy().starts_with(&d.mount_path))
+                .collect();
+
+            if candidates.is_empty() {
+                eprintln!("[ERROR] Диск не найден. Зарегистрируйте диск сначала (continuum add)");
+                return;
+            }
+
+            if candidates.len() == 1 {
+                let disk = candidates[0];
+                let relative_path = current_dir
+                    .strip_prefix(&disk.mount_path)
+                    .unwrap_or(&current_dir)
+                    .to_string_lossy()
+                    .to_string();
+                
+                if relative_path.is_empty() {
+                    eprintln!("[ERROR] Нельзя добавить корень диска как медиа-папку");
+                    return;
+                }
+
+                println!("Найден диск: {} ({})", disk.label, disk.disk_id);
+                println!("Относительный путь: {}", relative_path);
+
+                match crate::client::add_root(&disk.disk_id, &relative_path).await {
+                    Ok(msg) => println!("[OK] {}", msg),
+                    Err(e) => eprintln!("[ERROR] {}", e),
+                }
+            } else {
+                println!("Найдено несколько подходящих дисков:");
+                for d in &candidates {
+                    println!("  {} - {} ({})", d.disk_id, d.label, d.mount_path);
+                }
+                eprintln!("[ERROR] Уточните диск командой: continuum roots add <contains> <path>");
+            }
+        }
+        Err(e) => eprintln!("[ERROR] {}", e),
     }
 }

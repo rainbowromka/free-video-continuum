@@ -56,6 +56,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/admin/disks", web::get().to(api::disks::search_disks))
             .route("/api/admin/disks/check", web::post().to(api::disks::check_disks))
             .route("/api/admin/roots", web::post().to(api::disks::add_root))
+            .route("/api/admin/roots", web::get().to(api::disks::list_roots))
     })
     .bind("127.0.0.1:9090")?
     .run()
