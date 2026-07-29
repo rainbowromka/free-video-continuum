@@ -189,3 +189,70 @@ pub async fn list_roots(disk_id: &str) -> Result<Vec<RootInfo>, String> {
         Err(format!("Ошибка сервера: {}", response.status()))
     }
 }
+
+pub async fn set_active_disk(disk_id: &str) -> Result<String, String> {
+    let url = format!("{}/api/admin/state/disk", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({"disk_id": disk_id}))
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+pub async fn set_active_root(disk_id: &str, root_id: &str) -> Result<String, String> {
+    let url = format!("{}/api/admin/state/root", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "disk_id": disk_id,
+            "root_id": root_id
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ActiveState {
+    pub disk_id: Option<String>,
+    pub root_id: Option<String>,
+}
+
+pub async fn get_active_state() -> Result<ActiveState, String> {
+    let url = format!("{}/api/admin/state", server_url());
+    let client = Client::new();
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        response
+            .json::<ActiveState>()
+            .await
+            .map_err(|e| format!("Ошибка чтения: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
