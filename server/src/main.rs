@@ -9,6 +9,7 @@ use std::sync::Mutex;
 mod db;
 mod api;
 mod storage;
+mod state;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -33,6 +34,8 @@ async fn main() -> std::io::Result<()> {
         .unwrap_or_else(|e| info!("Предупреждение при синхронизации дисков: {}", e));
 
     let conn = web::Data::new(Mutex::new(db.into_connection()));
+    let active_state = web::Data::new(Mutex::new(state::ActiveState::new()));
+
 
     let conn_clone = conn.clone();
     tokio::spawn(async move {
@@ -50,6 +53,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(conn.clone())
+            .app_data(active_state.clone())
             .wrap(TracingLogger::default())
             .route("/health", web::get().to(health_check))
             .route("/api/admin/disks", web::post().to(api::disks::add_disk))
@@ -57,6 +61,9 @@ async fn main() -> std::io::Result<()> {
             .route("/api/admin/disks/check", web::post().to(api::disks::check_disks))
             .route("/api/admin/roots", web::post().to(api::disks::add_root))
             .route("/api/admin/roots", web::get().to(api::disks::list_roots))
+            .route("/api/admin/state/disk", web::post().to(api::state::set_active_disk))
+            .route("/api/admin/state/root", web::post().to(api::state::set_active_root))
+            .route("/api/admin/state", web::get().to(api::state::get_active_state))
     })
     .bind("127.0.0.1:9090")?
     .run()

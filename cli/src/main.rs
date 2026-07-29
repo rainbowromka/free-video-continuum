@@ -1,5 +1,7 @@
 mod client;
 mod interactive;
+mod commands;
+mod display;
 
 use clap::{Parser, Subcommand};
 
@@ -38,6 +40,16 @@ enum DiskCommands {
     Ls,
     /// Проверить доступность дисков
     Check,
+    /// Установить активный диск
+    Use {
+        /// Подстрока для поиска диска
+        contains: String,
+    },
+    /// Зарегистрировать диск или папку
+    Add {
+        /// Путь к диску или папке (если не указан — интерактивный режим)
+        path: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -51,136 +63,37 @@ enum RootsCommands {
     },
     /// Список медиа-папок диска
     Ls {
-        /// Подстрока для поиска диска (по ID или label)
-        contains: String,
+        /// Подстрока для поиска диска (если не указан — активный диск)
+        contains: Option<String>,
     },
-}
-
-fn print_disks(disks: &[client::DiskInfo]) {
-    if disks.is_empty() {
-        println!("Нет зарегистрированных дисков");
-    } else {
-        println!("{:<36} {:<20} {:<30} {:<10} {:<10}", "ID", "LABEL", "PATH", "TYPE", "AVAILABLE");
-        println!("{}", "-".repeat(106));
-        for d in disks {
-            println!("{:<36} {:<20} {:<30} {:<10} {:<10}",
-                d.disk_id,
-                d.label,
-                d.mount_path,
-                d.disk_type,
-                if d.is_available { "[OK]" } else { "[--]" }
-            );
-        }
-    }
+    /// Установить активный root
+    Use {
+        /// Подстрока для поиска root (по relative_path)
+        contains: String,
+    },    
 }
 
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-
+    
     match cli.command {
-        Commands::Add { path } => {
-            match path {
-                Some(p) => {
-                    println!("Добавление диска: {}", p);
-                    match client::add_disk(&p, &p, "fixed").await {
-                        Ok(resp) => println!("[OK] Диск зарегистрирован: {} ({})", resp.disk_id, resp.message),
-                        Err(e) => eprintln!("[ERROR] {}", e),
-                    }
-                }
-                None => {
-                    interactive::add_disk_wizard().await;
-                }
-            }
-        }
-        Commands::Disk(cmd) => match cmd {
-            DiskCommands::Ls => {
-                match client::list_disks().await {
-                    Ok(disks) => print_disks(&disks),
-                    Err(e) => eprintln!("[ERROR] {}", e),
-                }
-            }
-            DiskCommands::Check => {
-                match client::check_disks().await {
-                    Ok(msg) => println!("[OK] {}", msg),
-                    Err(e) => eprintln!("[ERROR] {}", e),
-                }
-            }
+        Commands::Add { path } => commands::disk::handle_add(path).await,
+        Commands::Disk(cmd) => match cmd {            
+            DiskCommands::Ls => commands::disk::handle_ls().await,
+            DiskCommands::Check => commands::disk::handle_check().await,
+            DiskCommands::Use { contains } => commands::disk::handle_use(&contains).await,
+            DiskCommands::Add { path } => commands::disk::handle_add(path).await,
         },
-        Commands::Ls => {
-            match client::list_disks().await {
-                Ok(disks) => print_disks(&disks),
-                Err(e) => eprintln!("[ERROR] {}", e),
-            }
-        }
+        Commands::Ls => commands::disk::handle_ls().await,
         Commands::Catalog => {
             println!("Режим каталогизации — в разработке");
         }
-        Commands::Status => {
-            println!("Статус — в разработке");
-        }
+        Commands::Status => commands::disk::handle_status().await,        
         Commands::Roots(cmd) => match cmd {
-            RootsCommands::Add { contains, path } => {
-                match (contains, path) {
-                    (Some(contains), Some(path)) => {
-                        match client::search_disks(&contains).await {
-                            Ok(disks) if disks.len() == 1 => {
-                                let disk = &disks[0];
-                                match client::add_root(&disk.disk_id, &path).await {
-                                    Ok(msg) => println!("[OK] {}", msg),
-                                    Err(e) => eprintln!("[ERROR] {}", e),
-                                }
-                            }
-                            Ok(disks) if disks.is_empty() => {
-                                eprintln!("[ERROR] Диск не найден по '{}'", contains);
-                            }
-                            Ok(disks) => {
-                                println!("Найдено несколько дисков:");
-                                for d in &disks {
-                                    println!("  {} - {}", d.disk_id, d.label);
-                                }
-                                eprintln!("[ERROR] Уточните запрос");
-                            }
-                            Err(e) => eprintln!("[ERROR] {}", e),
-                        }
-                    }
-                    _ => {
-                        interactive::add_root_wizard().await;
-                    }
-                }
-            },
-            RootsCommands::Ls { contains } => {
-                match client::search_disks(&contains).await {
-                    Ok(disks) if disks.len() == 1 => {
-                        let disk = &disks[0];
-                        match client::list_roots(&disk.disk_id).await {
-                            Ok(roots) => {
-                                if roots.is_empty() {
-                                    println!("Нет медиа-папок для диска '{}'", disk.label);
-                                } else {
-                                    println!("Диск: {} ({})", disk.label, disk.disk_id);
-                                    println!("{:<36} {:<30}", "ID", "PATH");
-                                    println!("{}", "-".repeat(66));
-                                    for r in &roots {
-                                        println!("{:<36} {:<30}", r.id, r.relative_path);
-                                    }
-                                }
-                            }
-                            Err(e) => eprintln!("[ERROR] {}", e),
-                        }
-                    }
-                    Ok(disks) if disks.is_empty() => {
-                        eprintln!("[ERROR] Диск не найден по '{}'", contains);
-                    }
-                    Ok(disks) => {
-                        println!("Найдено несколько дисков, уточните:");
-                        for d in &disks {
-                            println!("  {} - {}", d.disk_id, d.label);
-                        }
-                    }
-                    Err(e) => eprintln!("[ERROR] {}", e),
-                }
-            },
+            RootsCommands::Add { contains, path } => commands::roots::handle_add(contains, path).await,
+            RootsCommands::Ls { contains } => commands::roots::handle_ls(contains).await,
+            RootsCommands::Use { contains } => commands::roots::handle_use(&contains).await,
         },
     }
 }
