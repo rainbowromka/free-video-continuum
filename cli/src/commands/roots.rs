@@ -108,3 +108,10 @@ pub async fn handle_use(contains: &str) {
         Err(e) => eprintln!("[ERROR] {}", e),
     }
 }
+
+pub async fn handle_scan() {
+    match client::scan_events().await {
+        Ok(msg) => println!("[OK] {}", msg),
+        Err(e) => eprintln!("[ERROR] {}", e),
+    }
+}

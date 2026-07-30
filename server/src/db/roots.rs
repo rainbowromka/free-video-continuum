@@ -1,5 +1,6 @@
 use rusqlite::{Connection, Result, params};
 use uuid::Uuid;
+use rusqlite::OptionalExtension;
 
 pub struct Root {
     pub id: String,
@@ -45,4 +46,19 @@ pub fn exists(conn: &Connection, disk_id: &str, relative_path: &str) -> Result<b
         |row| row.get(0),
     )?;
     Ok(exists)
+}
+
+pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<Root>> {
+    conn.query_row(
+        "SELECT id, disk_id, relative_path FROM roots WHERE id = ?1",
+        params![id],
+        |row| {
+            Ok(Root {
+                id: row.get(0)?,
+                disk_id: row.get(1)?,
+                relative_path: row.get(2)?,
+            })
+        },
+    )
+    .optional()
 }

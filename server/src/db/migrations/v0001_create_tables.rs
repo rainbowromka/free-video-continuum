@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS roots (
 
 CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
-    media_root_id TEXT NOT NULL REFERENCES media_roots(id),
+    media_root_id TEXT NOT NULL REFERENCES roots(id),
     folder_name TEXT NOT NULL,
     event_date TEXT,
     description TEXT,
