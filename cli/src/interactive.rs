@@ -144,7 +144,7 @@ pub async fn add_root_wizard() {
     // Шаг 2: не нашли маркер — ищем среди fixed дисков
     match crate::client::list_disks().await {
         Ok(disks) => {
-            let mut candidates: Vec<_> = disks
+            let /*mut*/ candidates: Vec<_> = disks
                 .iter()
                 .filter(|d| d.disk_type == "fixed" && d.is_available)
                 .filter(|d| current_dir.to_string_lossy().starts_with(&d.mount_path))

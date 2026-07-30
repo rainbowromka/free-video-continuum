@@ -57,15 +57,15 @@ fn normalize_path(path: &str) -> String {
     trimmed
 }
 
-pub async fn list_disks(
-    conn: web::Data<std::sync::Mutex<Connection>>,
-) -> HttpResponse {
-    let conn = conn.lock().unwrap();
-    match list_disks_internal(&conn) {
-        Ok(result) => HttpResponse::Ok().json(result),
-        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e})),
-    }
-}
+// pub async fn list_disks(
+//     conn: web::Data<std::sync::Mutex<Connection>>,
+// ) -> HttpResponse {
+//     let conn = conn.lock().unwrap();
+//     match list_disks_internal(&conn) {
+//         Ok(result) => HttpResponse::Ok().json(result),
+//         Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e})),
+//     }
+// }
 
 pub async fn check_disks(
     conn: web::Data<std::sync::Mutex<Connection>>,
@@ -206,5 +206,55 @@ pub async fn list_roots(
         Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
             "error": e.to_string()
         })),
+    }
+}
+
+pub async fn scan_events(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    state: web::Data<std::sync::Mutex<crate::state::ActiveState>>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+    let state = state.lock().unwrap();
+
+    // Получаем активный root
+    let root_id = match &state.root_id {
+        Some(id) => id.clone(),
+        None => return HttpResponse::BadRequest().json(serde_json::json!({
+            "error": "Активный root не выбран. Используйте roots use"
+        })),
+    };
+
+    // Получаем root из БД
+    let root = match crate::db::roots::list_by_disk(&conn, &state.disk_id.clone().unwrap_or_default()) {
+        Ok(roots) => roots.into_iter().find(|r| r.id == root_id),
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    };
+
+    let root = match root {
+        Some(r) => r,
+        None => return HttpResponse::NotFound().json(serde_json::json!({"error": "Root не найден"})),
+    };
+
+    // Получаем диск
+    let disk = match crate::db::disks::find_by_id(&conn, &root.disk_id) {
+        Ok(Some(d)) => d,
+        _ => return HttpResponse::NotFound().json(serde_json::json!({"error": "Диск не найден"})),
+    };
+
+    // Полный путь
+    let full_path = std::path::Path::new(&disk.mount_path).join(&root.relative_path);
+
+    match crate::services::scanner::scan_events(&conn, &root.id, &full_path.to_string_lossy()) {
+        Ok(result) => HttpResponse::Ok().json(serde_json::json!({
+            "total": result.total,
+            "new": result.new,
+            "events": result.events.iter().map(|e| serde_json::json!({
+                "folder_name": e.folder_name,
+                "event_date": e.event_date,
+                "description": e.description,
+                "is_new": e.is_new,
+            })).collect::<Vec<_>>(),
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e})),
     }
 }

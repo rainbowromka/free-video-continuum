@@ -10,6 +10,7 @@ mod db;
 mod api;
 mod storage;
 mod state;
+mod services;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -26,7 +27,7 @@ async fn main() -> std::io::Result<()> {
 
     info!("Запуск Free Video Continuum Server...");
 
-    let mut db = Database::open("continuum.db")
+    let /*mut*/ db = Database::open("continuum.db")
         .expect("Не удалось открыть базу данных");
     info!("База данных открыта");
 
@@ -64,6 +65,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/admin/state/disk", web::post().to(api::state::set_active_disk))
             .route("/api/admin/state/root", web::post().to(api::state::set_active_root))
             .route("/api/admin/state", web::get().to(api::state::get_active_state))
+            .route("/api/admin/scan/events", web::post().to(api::disks::scan_events))
     })
     .bind("127.0.0.1:9090")?
     .run()

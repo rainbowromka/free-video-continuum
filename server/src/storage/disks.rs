@@ -32,10 +32,10 @@ pub fn read_marker(mount_path: &str) -> Result<String, String> {
     Ok(marker.disk_id)
 }
 
-/// Проверить, есть ли .continuum-disk в корне
-pub fn has_marker(mount_path: &str) -> bool {
-    Path::new(mount_path).join(MARKER_FILENAME).exists()
-}
+// /// Проверить, есть ли .continuum-disk в корне
+// pub fn has_marker(mount_path: &str) -> bool {
+//     Path::new(mount_path).join(MARKER_FILENAME).exists()
+// }
 
 /// Обойти буквы дисков (Windows) и найти все .continuum-disk
 #[cfg(target_os = "windows")]

@@ -49,21 +49,21 @@ pub async fn add_disk(label: &str, mount_path: &str, disk_type: &str) -> Result<
     }
 }
 
-pub async fn health_check() -> Result<String, String> {
-    let url = format!("{}/health", server_url());
-    let client = Client::new();
+// pub async fn health_check() -> Result<String, String> {
+//     let url = format!("{}/health", server_url());
+//     let client = Client::new();
 
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Сервер недоступен: {}", e))?;
+//     let response = client
+//         .get(&url)
+//         .send()
+//         .await
+//         .map_err(|e| format!("Сервер недоступен: {}", e))?;
 
-    response
-        .text()
-        .await
-        .map_err(|e| format!("Ошибка чтения ответа: {}", e))
-}
+//     response
+//         .text()
+//         .await
+//         .map_err(|e| format!("Ошибка чтения ответа: {}", e))
+// }
 
 #[derive(Deserialize)]
 pub struct DiskInfo {
@@ -166,7 +166,7 @@ pub async fn find_disk_by_path(mount_path: &str) -> Option<DiskInfo> {
 #[derive(Deserialize)]
 pub struct RootInfo {
     pub id: String,
-    pub disk_id: String,
+    // pub disk_id: String,
     pub relative_path: String,
 }
 
@@ -254,5 +254,25 @@ pub async fn get_active_state() -> Result<ActiveState, String> {
             .map_err(|e| format!("Ошибка чтения: {}", e))
     } else {
         Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+pub async fn scan_events() -> Result<String, String> {
+    let url = format!("{}/api/admin/scan/events", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        Err(format!("Ошибка сервера ({}): {}", status, body))
     }
 }

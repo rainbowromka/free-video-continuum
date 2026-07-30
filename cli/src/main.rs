@@ -32,6 +32,8 @@ enum Commands {
     /// Управление медиа-папками (roots)
     #[command(subcommand)]
     Roots(RootsCommands),
+    /// Сканировать активный root (события)
+    Scan,    
 }
 
 #[derive(Subcommand)]
@@ -95,5 +97,6 @@ async fn main() {
             RootsCommands::Ls { contains } => commands::roots::handle_ls(contains).await,
             RootsCommands::Use { contains } => commands::roots::handle_use(&contains).await,
         },
+        Commands::Scan => commands::roots::handle_scan().await,
     }
 }
