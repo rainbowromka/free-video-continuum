@@ -209,52 +209,34 @@ pub async fn list_roots(
     }
 }
 
-pub async fn scan_events(
+#[derive(Deserialize)]
+pub struct CreateEventRequest {
+    pub media_root_id: String,
+    pub folder_name: String,
+    pub event_date: Option<String>,
+    pub description: Option<String>,
+}
+
+pub async fn create_event(
     conn: web::Data<std::sync::Mutex<Connection>>,
-    state: web::Data<std::sync::Mutex<crate::state::ActiveState>>,
+    req: web::Json<CreateEventRequest>,
 ) -> HttpResponse {
     let conn = conn.lock().unwrap();
-    let state = state.lock().unwrap();
 
-    // Получаем активный root
-    let root_id = match &state.root_id {
-        Some(id) => id.clone(),
-        None => return HttpResponse::BadRequest().json(serde_json::json!({
-            "error": "Активный root не выбран. Используйте roots use"
+    match crate::db::events::insert(
+        &conn,
+        &req.media_root_id,
+        &req.folder_name,
+        req.event_date.as_deref(),
+        req.description.as_deref(),
+    ) {
+        Ok((id, is_new)) => HttpResponse::Created().json(serde_json::json!({
+            "id": id,
+            "is_new": is_new,
+            "message": if is_new { "Событие создано" } else { "Событие уже существует" }
         })),
-    };
-
-    // Получаем root из БД
-    let root = match crate::db::roots::list_by_disk(&conn, &state.disk_id.clone().unwrap_or_default()) {
-        Ok(roots) => roots.into_iter().find(|r| r.id == root_id),
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
-    };
-
-    let root = match root {
-        Some(r) => r,
-        None => return HttpResponse::NotFound().json(serde_json::json!({"error": "Root не найден"})),
-    };
-
-    // Получаем диск
-    let disk = match crate::db::disks::find_by_id(&conn, &root.disk_id) {
-        Ok(Some(d)) => d,
-        _ => return HttpResponse::NotFound().json(serde_json::json!({"error": "Диск не найден"})),
-    };
-
-    // Полный путь
-    let full_path = std::path::Path::new(&disk.mount_path).join(&root.relative_path);
-
-    match crate::services::scanner::scan_events(&conn, &root.id, &full_path.to_string_lossy()) {
-        Ok(result) => HttpResponse::Ok().json(serde_json::json!({
-            "total": result.total,
-            "new": result.new,
-            "events": result.events.iter().map(|e| serde_json::json!({
-                "folder_name": e.folder_name,
-                "event_date": e.event_date,
-                "description": e.description,
-                "is_new": e.is_new,
-            })).collect::<Vec<_>>(),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": e.to_string()
         })),
-        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e})),
     }
 }

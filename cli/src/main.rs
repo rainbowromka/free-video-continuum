@@ -2,6 +2,7 @@ mod client;
 mod interactive;
 mod commands;
 mod display;
+mod scanner;
 
 use clap::{Parser, Subcommand};
 
