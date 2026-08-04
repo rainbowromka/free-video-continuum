@@ -65,7 +65,7 @@ pub async fn add_disk(label: &str, mount_path: &str, disk_type: &str) -> Result<
 //         .map_err(|e| format!("Ошибка чтения ответа: {}", e))
 // }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DiskInfo {
     pub disk_id: String,
     pub label: String,
@@ -263,6 +263,32 @@ pub async fn scan_events() -> Result<String, String> {
 
     let response = client
         .post(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        Err(format!("Ошибка сервера ({}): {}", status, body))
+    }
+}
+
+pub async fn create_event(media_root_id: &str, folder_name: &str, event_date: Option<&str>, description: Option<&str>) -> Result<String, String> {
+    let url = format!("{}/api/admin/events", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "media_root_id": media_root_id,
+            "folder_name": folder_name,
+            "event_date": event_date,
+            "description": description,
+        }))
         .send()
         .await
         .map_err(|e| format!("Ошибка подключения: {}", e))?;

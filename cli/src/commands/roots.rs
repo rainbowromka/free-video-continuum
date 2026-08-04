@@ -1,5 +1,6 @@
 use crate::client;
 use crate::display;
+use std::path::Path;
 
 pub async fn handle_add(contains: Option<String>, path: Option<String>) {
     match (contains, path) {
@@ -110,8 +111,75 @@ pub async fn handle_use(contains: &str) {
 }
 
 pub async fn handle_scan() {
-    match client::scan_events().await {
-        Ok(msg) => println!("[OK] {}", msg),
-        Err(e) => eprintln!("[ERROR] {}", e),
+    // Получаем активный root через сервер
+    let state = match client::get_active_state().await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[ERROR] {}", e);
+            return;
+        }
+    };
+
+    let (disk_id, root_id) = match (&state.disk_id, &state.root_id) {
+        (Some(d), Some(r)) => (d.clone(), r.clone()),
+        _ => {
+            eprintln!("[ERROR] Активный диск или root не выбран");
+            return;
+        }
+    };
+
+    // Получаем информацию о диске и root'е
+    let disk = match client::search_disks(&disk_id).await {
+        Ok(disks) if disks.len() == 1 => disks[0].clone(),
+        _ => {
+            eprintln!("[ERROR] Диск не найден");
+            return;
+        }
+    };
+
+    let roots = match client::list_roots(&disk_id).await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("[ERROR] {}", e);
+            return;
+        }
+    };
+
+    let root = match roots.iter().find(|r| r.id == root_id) {
+        Some(r) => r,
+        None => {
+            eprintln!("[ERROR] Root не найден");
+            return;
+        }
+    };
+
+    // Полный путь
+    let full_path = Path::new(&disk.mount_path).join(&root.relative_path);
+    let full_path_str = full_path.to_string_lossy().to_string();
+
+    println!("Сканирование: {}", full_path_str);
+
+    // Ищем события
+    let scan_result = match crate::scanner::find_events(&full_path_str) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("[ERROR] {}", e);
+            return;
+        }
+    };
+
+    println!("Найдено папок: {}", scan_result.total);
+
+    for event in &scan_result.events {
+        match client::create_event(&root_id, &event.folder_name, event.event_date.as_deref(), event.description.as_deref()).await {
+            Ok(response) => {            
+                if response.contains("\"is_new\":true") {
+                    println!("  [ADDED] {} - OK", event.folder_name);
+                } else {
+                    println!("  [EXIST] {} - OK", event.folder_name);
+                }
+            }
+            Err(e) => eprintln!("  [ERROR] {}: {}", event.folder_name, e),
+        }
     }
 }

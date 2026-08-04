@@ -15,7 +15,7 @@ pub fn insert(
     folder_name: &str,
     event_date: Option<&str>,
     description: Option<&str>,
-) -> Result<String> {
+) -> Result<(String, bool)> {
     let id = Uuid::new_v4().to_string();
 
     conn.execute(
@@ -24,17 +24,16 @@ pub fn insert(
         params![id, media_root_id, folder_name, event_date, description],
     )?;
 
-    // Если запись уже была (IGNORE), получаем существующий id
     if conn.changes() == 0 {
         let existing_id: String = conn.query_row(
             "SELECT id FROM events WHERE media_root_id = ?1 AND folder_name = ?2",
             params![media_root_id, folder_name],
             |row| row.get(0),
         )?;
-        return Ok(existing_id);
+        return Ok((existing_id, false));
     }
 
-    Ok(id)
+    Ok((id, true))
 }
 
 pub fn find_by_root(conn: &Connection, media_root_id: &str) -> Result<Vec<Event>> {

@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS events (
     folder_name TEXT NOT NULL,
     event_date TEXT,
     description TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(media_root_id, folder_name)
 );
 
 CREATE TABLE IF NOT EXISTS assets (
