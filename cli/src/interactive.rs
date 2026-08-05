@@ -186,3 +186,62 @@ pub async fn add_root_wizard() {
         Err(e) => eprintln!("[ERROR] {}", e),
     }
 }
+
+
+/// Интерактивно разрешает камеру по folder_name.
+/// Возвращает camera_id (новый или существующий).
+pub async fn resolve_camera(folder_name: &str) -> Result<String, String> {
+    println!("\nНайдена папка камеры: '{}'", folder_name);
+
+    // Ищем существующую камеру по folder_name
+    let existing = crate::client::search_cameras(folder_name).await?;
+    
+    if !existing.is_empty() {
+        // Показываем найденные
+        println!("Найдены похожие камеры:");
+        for (i, cam) in existing.iter().enumerate() {
+            let name = cam["name"].as_str().unwrap_or("");
+            let fnm = cam["folder_name"].as_str().unwrap_or("");
+            println!("  {}. {} (папка: {})", i + 1, name, fnm);
+        }
+        println!("  0. Создать новую камеру");
+        
+        let selection = Select::new()
+            .with_prompt("Выберите камеру")
+            .default(0)
+            .items(&{
+                let mut items: Vec<String> = existing.iter()
+                    .map(|c| c["name"].as_str().unwrap_or("").to_string())
+                    .collect();
+                items.push("Новая камера".to_string());
+                items
+            })
+            .interact()
+            .unwrap();
+
+        if selection < existing.len() {
+            let camera_id = existing[selection]["id"].as_str().unwrap().to_string();
+            
+            // Создаём/находим camera_instance
+            let name = existing[selection]["name"].as_str().unwrap_or(folder_name);
+            let resp = crate::client::create_camera(name, folder_name).await?;
+            println!("[OK] Использована камера: {}", name);
+            return Ok(camera_id);
+        }
+    }
+
+    // Новая камера
+    let name: String = Input::new()
+        .with_prompt("Введите имя камеры")
+        .default(folder_name.to_string())
+        .interact_text()
+        .unwrap();
+
+    let resp = crate::client::create_camera(&name, folder_name).await?;
+    // Парсим ответ чтобы получить id
+    let parsed: serde_json::Value = serde_json::from_str(&resp).unwrap_or_default();
+    let camera_id = parsed["id"].as_str().unwrap_or("").to_string();
+    
+    println!("[OK] Создана новая камера: {}", name);
+    Ok(camera_id)
+}
