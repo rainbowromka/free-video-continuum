@@ -1,6 +1,7 @@
 use crate::client;
 use crate::display;
 use std::path::Path;
+use dialoguer::Confirm;
 
 pub async fn handle_add(contains: Option<String>, path: Option<String>) {
     match (contains, path) {
@@ -171,15 +172,80 @@ pub async fn handle_scan() {
     println!("Найдено папок: {}", scan_result.total);
 
     for event in &scan_result.events {
+
+        let scan_event = Confirm::new()
+            .with_prompt(format!("  Сканировать событие '{}'?", event.folder_name))
+            .default(true)
+            .interact()
+            .unwrap_or(true);
+
+        if !scan_event {
+            println!("    [SKIP]");
+            continue;
+        }
+
         match client::create_event(&root_id, &event.folder_name, event.event_date.as_deref(), event.description.as_deref()).await {
-            Ok(response) => {            
+            Ok(response) => {
                 if response.contains("\"is_new\":true") {
                     println!("  [ADDED] {} - OK", event.folder_name);
                 } else {
                     println!("  [EXIST] {} - OK", event.folder_name);
                 }
+
+                let event_id = get_id_from_response(&response);
+                if let Some(id) = event_id {
+                    scan_event_cameras(&event.full_path, &id, &event.folder_name).await;
+                }
             }
             Err(e) => eprintln!("  [ERROR] {}: {}", event.folder_name, e),
         }
     }
+
+    fn get_id_from_response(response: &str) -> Option<String> {
+        let parsed: serde_json::Value = serde_json::from_str(response).ok()?;
+        parsed["id"].as_str().map(|s| s.to_string())
+    }
+
+    async fn scan_event_cameras(event_path: &str, event_id: &str, event_name: &str) {
+        let subdirs = match std::fs::read_dir(event_path) {
+            Ok(entries) => entries
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_dir())
+                .collect::<Vec<_>>(),
+            Err(_) => return,
+        };
+
+        if subdirs.is_empty() {
+            return;
+        }
+
+        println!("    Камеры в событии '{}':", event_name);
+        for subdir in &subdirs {
+            let folder_name = subdir.file_name().to_string_lossy().to_string();
+
+            let scan_camera = Confirm::new()
+                .with_prompt(format!("      Сканировать камеру '{}'?", folder_name))
+                .default(true)
+                .interact()
+                .unwrap_or(true);
+
+            if !scan_camera {
+                println!("      [SKIP] {}", folder_name);
+                continue;
+            }
+           
+            let folder_name = subdir.file_name().to_string_lossy().to_string();
+            print!("      {} ... ", folder_name);
+
+            match crate::interactive::resolve_camera(&folder_name).await {
+                Ok(camera_id) => {
+                    match client::create_camera_instance(&camera_id, event_id, &folder_name).await {
+                        Ok(_) => println!("[OK]"),
+                        Err(e) => println!("[ERROR] {}", e),
+                    }
+                }
+                Err(e) => println!("[ERROR] {}", e),
+            }
+        }
+    }    
 }

@@ -1,5 +1,5 @@
 use rusqlite::{Connection, Result};
-use crate::db::migrations::{Migration, v0001_create_tables};
+use crate::db::migrations::{Migration, v0001_create_tables, v0002_cameras};
 
 pub struct Database {
     conn: Connection,
@@ -45,6 +45,7 @@ impl Database {
 
         let migrations: Vec<Box<dyn Migration>> = vec![
             Box::new(v0001_create_tables::V0001CreateTables),
+            Box::new(v0002_cameras::V0002Cameras)
         ];
 
         let current_version = migrations.iter()

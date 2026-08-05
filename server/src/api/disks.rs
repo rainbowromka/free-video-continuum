@@ -240,3 +240,67 @@ pub async fn create_event(
         })),
     }
 }
+
+#[derive(Deserialize)]
+pub struct CreateCameraRequest {
+    pub name: String,
+    pub folder_name: String,
+}
+
+pub async fn create_camera(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    req: web::Json<CreateCameraRequest>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+
+    match crate::db::cameras::find_or_create(&conn, &req.name, &req.folder_name) {
+        Ok((id, is_new)) => HttpResponse::Created().json(serde_json::json!({
+            "id": id,
+            "is_new": is_new,
+            "message": if is_new { "Камера создана" } else { "Камера уже существует" }
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}
+
+pub async fn search_cameras(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    query: web::Query<SearchQuery>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+    let search = query.search.as_deref().unwrap_or("");
+
+    match crate::db::cameras::search(&conn, search) {
+        Ok(cameras) => {
+            let result: Vec<serde_json::Value> = cameras.iter().map(|c| serde_json::json!({
+                "id": c.id,
+                "name": c.name,
+                "folder_name": c.folder_name,
+            })).collect();
+            HttpResponse::Ok().json(result)
+        }
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CreateCameraInstanceRequest {
+    pub camera_id: String,
+    pub event_id: String,
+    pub folder_name: String,
+}
+
+pub async fn create_camera_instance(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    req: web::Json<CreateCameraInstanceRequest>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+
+    match crate::db::camera_instances::find_or_create(&conn, &req.camera_id, &req.event_id, &req.folder_name) {
+        Ok((id, is_new)) => HttpResponse::Created().json(serde_json::json!({
+            "id": id,
+            "is_new": is_new,
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}

@@ -302,3 +302,63 @@ pub async fn create_event(media_root_id: &str, folder_name: &str, event_date: Op
         Err(format!("Ошибка сервера ({}): {}", status, body))
     }
 }
+
+pub async fn create_camera(name: &str, folder_name: &str) -> Result<String, String> {
+    let url = format!("{}/api/admin/cameras", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({"name": name, "folder_name": folder_name}))
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+pub async fn search_cameras(query: &str) -> Result<Vec<serde_json::Value>, String> {
+    let url = format!("{}/api/admin/cameras?search={}", server_url(), query);
+    let client = Client::new();
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        response.json::<Vec<serde_json::Value>>().await
+            .map_err(|e| format!("Ошибка чтения: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+pub async fn create_camera_instance(camera_id: &str, event_id: &str, folder_name: &str) -> Result<String, String> {
+    let url = format!("{}/api/admin/camera-instances", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "camera_id": camera_id,
+            "event_id": event_id,
+            "folder_name": folder_name
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        Ok(body)
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
