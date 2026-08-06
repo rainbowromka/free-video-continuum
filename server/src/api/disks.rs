@@ -304,3 +304,52 @@ pub async fn create_camera_instance(
         Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
     }
 }
+
+#[derive(Deserialize)]
+pub struct CreateAssetRequest {
+    pub event_id: String,
+    pub camera_instance_id: Option<String>,
+    pub file_path: String,
+    pub file_name: String,
+    pub file_size: i64,
+    pub media_type: String,
+    pub duration_secs: Option<f64>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub fps: Option<f64>,
+    pub codec: Option<String>,
+    pub bitrate: Option<i64>,
+    pub has_audio: Option<bool>,
+}
+
+pub async fn create_asset(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    req: web::Json<CreateAssetRequest>,
+) -> HttpResponse {
+    let conn = conn.lock().unwrap();
+
+    match crate::db::assets::insert(
+        &conn,
+        &req.event_id,
+        req.camera_instance_id.as_deref(),
+        &req.file_path,
+        &req.file_name,
+        req.file_size,
+        &req.media_type,
+        req.duration_secs,
+        req.width,
+        req.height,
+        req.fps,
+        req.codec.as_deref(),
+        req.bitrate,
+        req.has_audio.unwrap_or(false),
+    ) {
+        Ok(id) => HttpResponse::Created().json(serde_json::json!({
+            "id": id,
+            "message": "Ассет создан"
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": e.to_string()
+        })),
+    }
+}

@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS assets (
     file_size INTEGER,
     media_type TEXT,
     source TEXT,
+    camera_instance_id TEXT REFERENCES camera_instances(id),
+    sub_folder TEXT,
     duration_secs REAL,
     width INTEGER,
     height INTEGER,
@@ -64,6 +66,9 @@ CREATE TABLE IF NOT EXISTS assets (
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_unique_file 
+ON assets(event_id, COALESCE(camera_instance_id, ''), file_name);
 
 CREATE TABLE IF NOT EXISTS tags (
     id TEXT PRIMARY KEY,

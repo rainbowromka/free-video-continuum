@@ -362,3 +362,51 @@ pub async fn create_camera_instance(camera_id: &str, event_id: &str, folder_name
         Err(format!("Ошибка сервера: {}", response.status()))
     }
 }
+
+pub async fn create_asset(
+    event_id: &str,
+    camera_instance_id: Option<&str>,
+    file_path: &str,
+    file_name: &str,
+    file_size: i64,
+    media_type: &str,
+    duration_secs: Option<f64>,
+    width: Option<i32>,
+    height: Option<i32>,
+    fps: Option<f64>,
+    codec: Option<&str>,
+    bitrate: Option<i64>,
+    has_audio: bool,
+) -> Result<String, String> {
+    let url = format!("{}/api/admin/assets", server_url());
+    let client = Client::new();
+
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "event_id": event_id,
+            "camera_instance_id": camera_instance_id,
+            "file_path": file_path,
+            "file_name": file_name,
+            "file_size": file_size,
+            "media_type": media_type,
+            "duration_secs": duration_secs,
+            "width": width,
+            "height": height,
+            "fps": fps,
+            "codec": codec,
+            "bitrate": bitrate,
+            "has_audio": has_audio,
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Ошибка подключения: {}", e))?;
+
+    if response.status().is_success() {
+        Ok("OK".to_string())
+    } else {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        Err(format!("Ошибка сервера ({}): {}", status, body))
+    }
+}

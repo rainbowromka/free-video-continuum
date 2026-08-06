@@ -216,6 +216,9 @@ pub async fn handle_scan() {
         };
 
         if subdirs.is_empty() {
+            // Нет камер — сканируем видео прямо в событии
+            println!("    Видео в событии (без камеры):");
+            scan_videos_and_send(event_path, event_id, None).await;
             return;
         }
 
@@ -240,7 +243,12 @@ pub async fn handle_scan() {
             match crate::interactive::resolve_camera(&folder_name).await {
                 Ok(camera_id) => {
                     match client::create_camera_instance(&camera_id, event_id, &folder_name).await {
-                        Ok(_) => println!("[OK]"),
+                        Ok(resp) => {
+                            let instance_id = get_id_from_response(&resp);
+                            println!("[OK]");
+                            // Сканируем видео внутри камеры
+                            scan_videos_and_send(&subdir.path().to_string_lossy(), event_id, instance_id.as_deref()).await;
+                        }
                         Err(e) => println!("[ERROR] {}", e),
                     }
                 }
@@ -248,4 +256,34 @@ pub async fn handle_scan() {
             }
         }
     }    
+
+    async fn scan_videos_and_send(folder_path: &str, event_id: &str, camera_instance_id: Option<&str>) {
+        match crate::scanner::scan_videos_in_folder(folder_path) {
+            Ok(videos) => {
+                println!("        Найдено файлов: {}", videos.len());
+                for video in &videos {
+                    print!("          {} ... ", video.file_name);
+                    match client::create_asset(
+                        event_id,
+                        camera_instance_id,
+                        &video.file_path,
+                        &video.file_name,
+                        video.file_size,
+                        &video.media_type,
+                        video.duration_secs,
+                        video.width,
+                        video.height,
+                        video.fps,
+                        video.codec.as_deref(),
+                        video.bitrate,
+                        video.has_audio,
+                    ).await {
+                        Ok(_) => println!("[OK]"),
+                        Err(e) => println!("[ERROR] {}", e),
+                    }
+                }
+            }
+            Err(e) => eprintln!("        [ERROR] {}", e),
+        }
+    }
 }
