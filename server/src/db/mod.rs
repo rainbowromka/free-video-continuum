@@ -5,5 +5,6 @@ pub mod roots;
 pub mod events;
 pub mod cameras;
 pub mod camera_instances;
+pub mod assets;
 
 pub use database::Database;
