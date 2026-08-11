@@ -34,7 +34,12 @@ enum Commands {
     #[command(subcommand)]
     Roots(RootsCommands),
     /// Сканировать активный root (события)
-    Scan,    
+    Scan,
+    /// Показать дерево файлов
+    Tree {
+        /// Подстрока для поиска диска (опционально)
+        contains: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -99,5 +104,6 @@ async fn main() {
             RootsCommands::Use { contains } => commands::roots::handle_use(&contains).await,
         },
         Commands::Scan => commands::roots::handle_scan().await,
+        Commands::Tree { contains } => commands::roots::handle_tree(contains).await,
     }
 }

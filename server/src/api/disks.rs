@@ -353,3 +353,73 @@ pub async fn create_asset(
         })),
     }
 }
+
+pub async fn list_events(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let root_id = path.into_inner();
+    let conn = conn.lock().unwrap();
+
+    match crate::db::events::find_by_root(&conn, &root_id) {
+        Ok(events) => {
+            let result: Vec<serde_json::Value> = events.iter().map(|e| serde_json::json!({
+                "id": e.id,
+                "folder_name": e.folder_name,
+                "event_date": e.event_date,
+                "description": e.description,
+            })).collect();
+            HttpResponse::Ok().json(result)
+        }
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}
+
+pub async fn list_assets(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let event_id = path.into_inner();
+    let conn = conn.lock().unwrap();
+
+    match crate::db::assets::find_by_event(&conn, &event_id) {
+        Ok(assets) => {
+            let result: Vec<serde_json::Value> = assets.iter().map(|a| serde_json::json!({
+                "id": a.id,
+                "file_name": a.file_name,
+                "media_type": a.media_type,
+                "camera_instance_id": a.camera_instance_id,
+                "duration_secs": a.duration_secs,
+            })).collect();
+            HttpResponse::Ok().json(result)
+        }
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}
+
+pub async fn get_camera_instance(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let instance_id = path.into_inner();
+    let conn = conn.lock().unwrap();
+
+    match crate::db::camera_instances::find_by_id(&conn, &instance_id) {
+        Ok(Some(inst)) => {
+            // Получаем имя камеры
+            let camera_name = crate::db::cameras::find_by_id(&conn, &inst.camera_id)
+                .ok()
+                .flatten()
+                .map(|c| c.name)
+                .unwrap_or_default();
+
+            HttpResponse::Ok().json(serde_json::json!({
+                "id": inst.id,
+                "camera_name": camera_name,
+                "folder_name": inst.folder_name,
+            }))
+        }
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({"error": "Не найдено"})),
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}

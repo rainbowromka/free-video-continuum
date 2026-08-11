@@ -287,3 +287,112 @@ pub async fn handle_scan() {
         }
     }
 }
+
+
+pub async fn handle_tree(contains: Option<String>) {
+    // Определяем disk_id
+    let disk_id = match contains {
+        Some(ref c) => {
+            match client::search_disks(c).await {
+                Ok(disks) if disks.len() == 1 => disks[0].disk_id.clone(),
+                Ok(disks) if disks.is_empty() => {
+                    eprintln!("[ERROR] Диск не найден");
+                    return;
+                }
+                Ok(_) => {
+                    eprintln!("[ERROR] Найдено несколько дисков, уточните");
+                    return;
+                }
+                Err(e) => {
+                    eprintln!("[ERROR] {}", e);
+                    return;
+                }
+            }
+        }
+        None => {
+            match client::get_active_state().await {
+                Ok(state) => match state.disk_id {
+                    Some(id) => id,
+                    None => {
+                        eprintln!("[ERROR] Активный диск не выбран");
+                        return;
+                    }
+                },
+                Err(e) => {
+                    eprintln!("[ERROR] {}", e);
+                    return;
+                }
+            }
+        }
+    };
+
+    // Получаем информацию о диске
+    let disk = match client::search_disks(&disk_id).await {
+        Ok(disks) if disks.len() == 1 => disks[0].clone(),
+        _ => { eprintln!("[ERROR] Диск не найден"); return; }
+    };
+
+    let status = if disk.is_available { "[OK]" } else { "[--]" };
+    println!("[DSK] {} ({}) {}", disk.label, disk.mount_path, status);
+
+    // Получаем roots
+    let roots = match client::list_roots(&disk_id).await {
+        Ok(r) => r,
+        Err(e) => { eprintln!("[ERROR] {}", e); return; }
+    };
+
+    for root in &roots {
+        println!("  [ROT] {}", root.relative_path);
+
+        // Получаем события
+        let events = match client::list_events(&root.id).await {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        for event in &events {
+            let date_str = event.event_date.as_deref().unwrap_or("????-??-??");
+            let desc = event.description.as_deref().unwrap_or(&event.folder_name);
+            println!("    [EVT] {} {}", date_str, desc);
+
+            // Получаем ассеты
+            let assets = match client::list_assets(&event.id).await {
+                Ok(a) => a,
+                Err(_) => continue,
+            };
+
+            // Группируем по camera_instance_id
+            let with_camera: Vec<_> = assets.iter().filter(|a| a.camera_instance_id.is_some()).collect();
+            let without_camera: Vec<_> = assets.iter().filter(|a| a.camera_instance_id.is_none()).collect();
+
+            // Без камеры
+            for a in &without_camera {
+                println!("      [VID] {}", a.file_name);
+            }
+
+            // С камерой — группируем
+            if !with_camera.is_empty() {
+                let mut cameras: std::collections::HashMap<String, Vec<&client::AssetInfo>> = std::collections::HashMap::new();
+                for a in &with_camera {
+                    let cam_id = a.camera_instance_id.as_deref().unwrap_or("");
+                    cameras.entry(cam_id.to_string()).or_default().push(a);
+                }
+                for (cam_id, cam_assets) in &cameras {
+                    let cam_info = client::get_camera_instance(cam_id).await.ok();
+                    let cam_display = match &cam_info {
+                        Some(info) => {
+                            let name = info["camera_name"].as_str().unwrap_or("?");
+                            let folder = info["folder_name"].as_str().unwrap_or("?");
+                            format!("{}: {}", name, folder)
+                        }
+                        None => cam_id.clone(),
+                    };
+                    println!("      [CAM] {} [{}]", cam_display, cam_id);
+                    for a in cam_assets {
+                        println!("        [VID] {}", a.file_name);
+                    }
+                }
+            }
+        }
+    }
+}

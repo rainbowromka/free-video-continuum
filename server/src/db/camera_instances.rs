@@ -38,3 +38,22 @@ pub fn find_by_event_and_folder(conn: &Connection, event_id: &str, folder_name: 
     )
     .optional()
 }
+
+pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<CameraInstance>> {
+    conn.query_row(
+        "SELECT ci.id, ci.camera_id, ci.event_id, ci.folder_name, c.name
+         FROM camera_instances ci
+         JOIN cameras c ON ci.camera_id = c.id
+         WHERE ci.id = ?1",
+        params![id],
+        |row| {
+            Ok(CameraInstance {
+                id: row.get(0)?,
+                camera_id: row.get(1)?,
+                event_id: row.get(2)?,
+                folder_name: row.get(3)?,
+            })
+        },
+    )
+    .optional()
+}

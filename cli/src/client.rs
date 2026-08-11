@@ -410,3 +410,53 @@ pub async fn create_asset(
         Err(format!("Ошибка сервера ({}): {}", status, body))
     }
 }
+
+#[derive(Deserialize, Debug)]
+pub struct EventInfo {
+    pub id: String,
+    pub folder_name: String,
+    pub event_date: Option<String>,
+    pub description: Option<String>,
+}
+
+pub async fn list_events(root_id: &str) -> Result<Vec<EventInfo>, String> {
+    let url = format!("{}/api/admin/roots/{}/events", server_url(), root_id);
+    let client = Client::new();
+    let response = client.get(&url).send().await.map_err(|e| format!("Ошибка: {}", e))?;
+    if response.status().is_success() {
+        response.json::<Vec<EventInfo>>().await.map_err(|e| format!("Ошибка: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AssetInfo {
+    pub id: String,
+    pub file_name: String,
+    pub media_type: String,
+    pub camera_instance_id: Option<String>,
+    pub duration_secs: Option<f64>,
+}
+
+pub async fn list_assets(event_id: &str) -> Result<Vec<AssetInfo>, String> {
+    let url = format!("{}/api/admin/events/{}/assets", server_url(), event_id);
+    let client = Client::new();
+    let response = client.get(&url).send().await.map_err(|e| format!("Ошибка: {}", e))?;
+    if response.status().is_success() {
+        response.json::<Vec<AssetInfo>>().await.map_err(|e| format!("Ошибка: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
+
+pub async fn get_camera_instance(id: &str) -> Result<serde_json::Value, String> {
+    let url = format!("{}/api/admin/camera-instances/{}", server_url(), id);
+    let client = Client::new();
+    let response = client.get(&url).send().await.map_err(|e| format!("Ошибка: {}", e))?;
+    if response.status().is_success() {
+        response.json::<serde_json::Value>().await.map_err(|e| format!("Ошибка: {}", e))
+    } else {
+        Err(format!("Ошибка сервера: {}", response.status()))
+    }
+}
