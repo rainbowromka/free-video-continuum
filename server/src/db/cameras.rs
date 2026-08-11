@@ -55,3 +55,12 @@ pub fn search(conn: &Connection, query: &str) -> Result<Vec<Camera>> {
 
     Ok(cameras)
 }
+
+pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<Camera>> {
+    conn.query_row(
+        "SELECT id, name, folder_name FROM cameras WHERE id = ?1",
+        params![id],
+        |row| Ok(Camera { id: row.get(0)?, name: row.get(1)?, folder_name: row.get(2)? }),
+    )
+    .optional()
+}
