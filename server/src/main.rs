@@ -72,6 +72,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/admin/roots/{root_id}/events", web::get().to(api::disks::list_events))
             .route("/api/admin/events/{event_id}/assets", web::get().to(api::disks::list_assets))
             .route("/api/admin/camera-instances/{id}", web::get().to(api::disks::get_camera_instance))
+            .route("/api/admin/events/{event_id}/camera-instances", web::get().to(api::disks::list_camera_instances))
     })
     .bind("127.0.0.1:9090")?
     .run()

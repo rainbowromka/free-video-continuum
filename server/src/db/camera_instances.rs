@@ -57,3 +57,34 @@ pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<CameraInstance>>
     )
     .optional()
 }
+
+pub struct CameraInstanceWithName {
+    pub id: String,
+    pub camera_id: String,
+    pub event_id: String,
+    pub folder_name: String,
+    pub camera_name: String,
+}
+
+pub fn find_by_event(conn: &Connection, event_id: &str) -> Result<Vec<CameraInstanceWithName>> {
+    let mut stmt = conn.prepare(
+        "SELECT ci.id, ci.camera_id, ci.event_id, ci.folder_name, c.name
+         FROM camera_instances ci
+         JOIN cameras c ON ci.camera_id = c.id
+         WHERE ci.event_id = ?1
+         ORDER BY ci.folder_name"
+    )?;
+
+    let instances = stmt.query_map(params![event_id], |row| {
+        Ok(CameraInstanceWithName {
+            id: row.get(0)?,
+            camera_id: row.get(1)?,
+            event_id: row.get(2)?,
+            folder_name: row.get(3)?,
+            camera_name: row.get(4)?,
+        })
+    })?
+    .collect::<Result<Vec<_>>>()?;
+
+    Ok(instances)
+}
