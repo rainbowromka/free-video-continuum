@@ -423,3 +423,25 @@ pub async fn get_camera_instance(
         Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
     }
 }
+
+pub async fn list_camera_instances(
+    conn: web::Data<std::sync::Mutex<Connection>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let event_id = path.into_inner();
+    let conn = conn.lock().unwrap();
+
+    match crate::db::camera_instances::find_by_event(&conn, &event_id) {
+        Ok(instances) => {
+            let result: Vec<serde_json::Value> = instances.iter().map(|ci| serde_json::json!({
+                "id": ci.id,
+                "camera_id": ci.camera_id,
+                "event_id": ci.event_id,
+                "folder_name": ci.folder_name,
+                "camera_name": ci.camera_name,
+            })).collect();
+            HttpResponse::Ok().json(result)
+        }
+        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    }
+}
