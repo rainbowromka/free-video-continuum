@@ -1,11 +1,11 @@
 pub struct Renderer {
     program: gl::types::GLuint,
-    window_width: f32,
-    window_height: f32,
+    window_width: u32,
+    window_height: u32,
 }
 
 impl Renderer {
-    pub fn new(width: f32, height: f32) -> Result<Self, String> {
+    pub fn new(width: u32, height: u32) -> Result<Self, String> {
         let program = create_program()?;
         Ok(Self {
             program,
@@ -15,8 +15,8 @@ impl Renderer {
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
-        self.window_width = width as f32;
-        self.window_height = height as f32;
+        self.window_width = width;
+        self.window_height = height;
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
         }
@@ -26,11 +26,11 @@ impl Renderer {
         self.program
     }
 
-    pub fn window_width(&self) -> f32 {
+    pub fn window_width(&self) -> u32 {
         self.window_width
     }
 
-    pub fn window_height(&self) -> f32 {
+    pub fn window_height(&self) -> u32 {
         self.window_height
     }
 

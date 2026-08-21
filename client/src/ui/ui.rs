@@ -4,12 +4,12 @@ use crate::ui::renderer::Renderer;
 pub struct Ui {
     rects: Vec<Rect>,
     new_rects: Vec<Rect>,
-    client_width: f32,
-    client_height: f32,
+    client_width: u32,
+    client_height: u32,
 }
 
 impl Ui {
-    pub fn new(client_width: f32, client_height: f32) -> Self {
+    pub fn new(client_width: u32, client_height: u32) -> Self {
         Self {
             rects: Vec::new(),
             new_rects: Vec::new(),
@@ -18,20 +18,20 @@ impl Ui {
         }
     }
 
-    pub fn resize(&mut self, client_width: f32, client_height: f32) {
+    pub fn resize(&mut self, client_width: u32, client_height: u32) {
         self.client_width = client_width;
         self.client_height = client_height;
     }
 
-    pub fn client_width(&self) -> f32 {
+    pub fn client_width(&self) -> u32 {
         self.client_width
     }
 
-    pub fn client_height(&self) -> f32 {
+    pub fn client_height(&self) -> u32 {
         self.client_height
     }
 
-    pub fn add_rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
+    pub fn add_rect(&mut self, x: u32, y: u32, width: u32, height: u32) {
         self.new_rects.push(Rect::new(x, y, width, height));
     }
 

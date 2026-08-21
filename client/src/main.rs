@@ -6,13 +6,13 @@ use crate::ui::ui::Ui;
 
 fn main() {
     Window::new()
-        .with_size(1024.0, 780.0)
+        .with_size(1024, 780)
         .with_title("Free Video Continuum")
         .on_draw(|ui: &mut Ui| {
             ui.add_rect(
-                0.0,
-                0.0,
-                200.0,
+                0,
+                0,
+                200,
                 ui.client_height(),
             );
 // Идея такая, что ширина левой панели должна быть всегда 200 пикселей в координатах экрана (окна), 

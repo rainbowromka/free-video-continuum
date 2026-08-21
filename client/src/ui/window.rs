@@ -6,8 +6,8 @@ use glutin::window::WindowBuilder;
 use glutin::{Api, ContextBuilder, GlRequest};
 
 pub struct Window {
-    width: f32,
-    height: f32,
+    width: u32,
+    height: u32,
     title: String,
     on_draw: Option<Box<dyn FnMut(&mut Ui)>>,
 }
@@ -15,14 +15,14 @@ pub struct Window {
 impl Window {
     pub fn new() -> Self {
         Self {
-            width: 800.0,
-            height: 600.0,
+            width: 800,
+            height: 600,
             title: String::new(),
             on_draw: None,
         }
     }
 
-    pub fn with_size(mut self, width: f32, height: f32) -> Self {
+    pub fn with_size(mut self, width: u32, height: u32) -> Self {
         self.width = width;
         self.height = height;
         self
@@ -70,6 +70,7 @@ impl Window {
                     WindowEvent::Resized(physical_size) => {
                         gl_context.resize(physical_size);
                         renderer.resize(physical_size.width, physical_size.height);
+                        ui.resize(physical_size.width, physical_size.height);
                     }
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     _ => (),

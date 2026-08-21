@@ -1,15 +1,15 @@
 pub struct Rect {
     vao: Option<gl::types::GLuint>,
     vbo: Option<gl::types::GLuint>,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
     dirty: bool,
 }
 
 impl Rect {
-    pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+    pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             vao: None,
             vbo: None,
@@ -21,7 +21,7 @@ impl Rect {
         }
     }
 
-    pub fn set_position(&mut self, x: f32, y: f32) {
+    pub fn set_position(&mut self, x: u32, y: u32) {
         if self.x != x || self.y != y {
             self.x = x;
             self.y = y;
@@ -29,7 +29,7 @@ impl Rect {
         }
     }
 
-    pub fn set_size(&mut self, width: f32, height: f32) {
+    pub fn set_size(&mut self, width: u32, height: u32) {
         if self.width != width || self.height != height {
             self.width = width;
             self.height = height;
@@ -37,7 +37,7 @@ impl Rect {
         }
     }
 
-    pub fn draw(&mut self, program: gl::types::GLuint, window_width: f32, window_height: f32) {
+    pub fn draw(&mut self, program: gl::types::GLuint, window_width: u32, window_height: u32) {
         // Ленивая инициализация — первый вызов
         if self.vao.is_none() {
             let mut vao = 0;
@@ -64,7 +64,7 @@ impl Rect {
         }
     }
 
-    fn update_buffer(&self, window_width: f32, window_height: f32) {
+    fn update_buffer(&self, window_width: u32, window_height: u32) {
         let vertices = self.calculate_vertices(window_width, window_height);
 
         unsafe {
@@ -90,11 +90,18 @@ impl Rect {
         }
     }
 
-    fn calculate_vertices(&self, window_width: f32, window_height: f32) -> [f32; 12] {
-        let left = (self.x / window_width) * 2.0 - 1.0;
-        let right = ((self.x + self.width) / window_width) * 2.0 - 1.0;
-        let top = 1.0 - (self.y / window_height) * 2.0;
-        let bottom = 1.0 - ((self.y + self.height) / window_height) * 2.0;
+    fn calculate_vertices(&self, window_width: u32, window_height: u32) -> [f32; 12] {
+        let w = window_width as f32;
+        let h = window_height as f32;
+        let x = self.x as f32;
+        let y = self.y as f32;
+        let width = self.width as f32;
+        let height = self.height as f32;
+
+        let left = (x / w) * 2.0 - 1.0;
+        let right = ((x + width) / w) * 2.0 - 1.0;
+        let top = 1.0 - (y / h) * 2.0;
+        let bottom = 1.0 - ((y + height) / h) * 2.0;
 
         [
             left, top,
