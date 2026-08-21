@@ -1,5 +1,5 @@
-use crate::ui::rect::Rect;
 use crate::ui::renderer::Renderer;
+use crate::ui::ui::Ui;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
@@ -9,7 +9,7 @@ pub struct Window {
     width: f32,
     height: f32,
     title: String,
-    on_draw: Option<Box<dyn FnMut(&Renderer)>>,
+    on_draw: Option<Box<dyn FnMut(&mut Ui)>>,
 }
 
 impl Window {
@@ -33,7 +33,7 @@ impl Window {
         self
     }
 
-    pub fn on_draw<F: FnMut(&Renderer) + 'static>(mut self, callback: F) -> Self {
+    pub fn on_draw<F: FnMut(&mut Ui) + 'static>(mut self, callback: F) -> Self {
         self.on_draw = Some(Box::new(callback));
         self
     }
@@ -58,6 +58,7 @@ impl Window {
         gl::load_with(|ptr| gl_context.get_proc_address(ptr) as *const _);
 
         let mut renderer = Renderer::new(self.width, self.height).expect("Cannot create renderer");
+        let mut ui = Ui::new(self.width, self.height);
         let mut on_draw = self.on_draw.unwrap();
 
         event_loop.run(move |event, _, control_flow| {
@@ -74,8 +75,9 @@ impl Window {
                     _ => (),
                 },
                 Event::RedrawRequested(_) => {
-                    renderer.clear();
-                    on_draw(&renderer);
+                    renderer.clear();                    
+                    on_draw(&mut ui);
+                    ui.render(&renderer);
                     gl_context.swap_buffers().unwrap();
                 }
                 _ => (),
