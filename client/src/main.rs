@@ -1,16 +1,22 @@
 mod ui;
 
-use ui::rect::Rect;
 use ui::window::Window;
 
-fn main() {
-    let mut rect = Rect::new(100.0, 100.0, 200.0, 150.0);
+use crate::ui::ui::Ui;
 
+fn main() {
     Window::new()
         .with_size(1024.0, 780.0)
         .with_title("Free Video Continuum")
-        .on_draw(move |renderer| {
-            rect.draw(renderer.program(), renderer.window_width(), renderer.window_height());
+        .on_draw(|ui: &mut Ui| {
+            ui.add_rect(
+                0.0,
+                0.0,
+                200.0,
+                ui.client_height(),
+            );
+// Идея такая, что ширина левой панели должна быть всегда 200 пикселей в координатах экрана (окна), 
+// и должна пересчитываться с учетом изменения окна. Есть подозрение что при ресайзе renderer не обновляет ширину/высоту.
         })
         .run();
 }
