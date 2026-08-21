@@ -1,17 +1,16 @@
-mod controller;
-mod api;
+mod ui;
 
-use qmetaobject::prelude::*;
-use qmetaobject::QmlEngine;
+use ui::rect::Rect;
+use ui::window::Window;
 
 fn main() {
-    qml_register_type::<controller::Controller>(
-        &std::ffi::CString::new("Continuum").unwrap(),
-        1, 0,
-        &std::ffi::CString::new("Controller").unwrap()
-    );
+    let mut rect = Rect::new(100.0, 100.0, 200.0, 150.0);
 
-    let mut engine = QmlEngine::new();
-    engine.load_file("qml/main.qml".into());
-    engine.exec();
+    Window::new()
+        .with_size(1024.0, 780.0)
+        .with_title("Free Video Continuum")
+        .on_draw(move |renderer| {
+            rect.draw(renderer.program(), renderer.window_width(), renderer.window_height());
+        })
+        .run();
 }
