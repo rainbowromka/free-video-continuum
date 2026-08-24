@@ -9,6 +9,7 @@ pub struct Window {
     width: u32,
     height: u32,
     title: String,
+    client_color: (u8, u8, u8),
     on_draw: Option<Box<dyn FnMut(&mut Ui)>>,
 }
 
@@ -18,6 +19,7 @@ impl Window {
             width: 800,
             height: 600,
             title: String::new(),
+            client_color: (0xf8, 0xf8, 0xf8),    
             on_draw: None,
         }
     }
@@ -33,6 +35,11 @@ impl Window {
         self
     }
 
+    pub fn set_client_color(mut self, r: u8, g: u8, b: u8) -> Self {
+        self.client_color = (r, g, b);
+        self
+    }
+
     pub fn on_draw<F: FnMut(&mut Ui) + 'static>(mut self, callback: F) -> Self {
         self.on_draw = Some(Box::new(callback));
         self
@@ -42,7 +49,8 @@ impl Window {
         let event_loop = EventLoop::new();
         let window_builder = WindowBuilder::new()
             .with_title(&self.title)
-            .with_inner_size(glutin::dpi::LogicalSize::new(self.width, self.height));
+            .with_inner_size(glutin::dpi::LogicalSize::new(self.width, self.height))
+            .with_min_inner_size(glutin::dpi::LogicalSize::new(1024.0, 720.0));
 
         let gl_context = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
@@ -59,6 +67,8 @@ impl Window {
 
         let mut renderer = Renderer::new(self.width, self.height).expect("Cannot create renderer");
         let mut ui = Ui::new(self.width, self.height);
+        ui.set_client_color(self.client_color.0, self.client_color.1, self.client_color.2);
+
         let mut on_draw = self.on_draw.unwrap();
 
         event_loop.run(move |event, _, control_flow| {
@@ -76,8 +86,11 @@ impl Window {
                     _ => (),
                 },
                 Event::RedrawRequested(_) => {
-                    renderer.clear();                    
                     on_draw(&mut ui);
+
+                    let bg = ui.bg_color();
+                    renderer.clear(bg.0, bg.1, bg.2);                    
+                    
                     ui.render(&renderer);
                     gl_context.swap_buffers().unwrap();
                 }
@@ -85,4 +98,8 @@ impl Window {
             }
         });
     }
+}
+
+fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
 }

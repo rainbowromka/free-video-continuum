@@ -34,9 +34,9 @@ impl Renderer {
         self.window_height
     }
 
-    pub fn clear(&self) {
+    pub fn clear(&self, r: f32, g: f32, b: f32) {
         unsafe {
-            gl::ClearColor(0.1, 0.1, 0.2, 1.0);
+            gl::ClearColor(r, g, b, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
     }
