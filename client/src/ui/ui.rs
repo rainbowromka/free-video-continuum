@@ -1,4 +1,5 @@
 use crate::ui::rect::Rect;
+use crate::ui::rect_builder::RectBuilder;
 use crate::ui::renderer::Renderer;
 
 pub struct Ui {
@@ -23,6 +24,13 @@ impl Ui {
     pub fn resize(&mut self, client_width: u32, client_height: u32) {
         self.client_width = client_width;
         self.client_height = client_height;
+
+        for rect in &mut self.rects {
+            rect.mark_quad_dirty();
+        }
+        for rect in &mut self.new_rects {
+            rect.mark_quad_dirty();
+        }
     }
 
     pub fn client_width(&self) -> u32 {
@@ -33,29 +41,41 @@ impl Ui {
         self.client_height
     }
 
-    pub fn add_rect(&mut self, x: u32, y: u32, width: u32, height: u32) -> &mut Self {
-        self.new_rects.push(Rect::new(x, y, width, height));
-        self
+    pub fn add_rect(&mut self, x: u32, y: u32, width: u32, height: u32) -> RectBuilder {
+        RectBuilder::new(self, x, y, width, height)
+    }
+
+    pub fn push_rect(&mut self, rect: Rect) {
+        self.new_rects.push(rect);
     }
 
     pub fn render(&mut self, renderer: &Renderer) {
-        // Очищаем старые
-        self.rects.clear();
+        let new_count = self.new_rects.len();
 
-        // Переносим новые
-        for rect in self.new_rects.drain(..) {
-            // todo: вот тут надо сравнивать ректы между собой и если они разные, то помечать как грязный (требующий обновления)
-            // т.е. если поменялось 1. состояние, 2 координаты, 3 размеры, то помечаем как грязный. Появился новый или старый.
-            // что считать обновлением, ui должен рисоваться в текстуру, текстура уже рисуется в rect и запоминается. Если элемент 
-            // чистый, то в момент перерисовки перерисовывается старая тектура, если элемент грязный, то перерисовывается сначала
-            // текстура, потом элемент с новой текстурой.
-            self.rects.push(rect);
+        // Проходим по новым Rect'ам
+        for (index, new_rect) in self.new_rects.drain(..).enumerate() {
+            if index < self.rects.len() {
+                // Есть старый Rect — сравниваем
+                let old_rect = &mut self.rects[index];
+
+                if old_rect != &new_rect {
+                    // Что-то изменилось — обновляем только изменения
+                    old_rect.update_from(new_rect);
+                }
+                // Если равны — старый остаётся без изменений
+            } else {
+                // Новый Rect — добавляем
+                self.rects.push(new_rect);
+            }
         }
+
+        // Удаляем лишние старые Rect'ы (если новых меньше)
+        self.rects.truncate(new_count);
 
         // Рендерим
         for rect in &mut self.rects {
             rect.draw(
-                renderer.program(),
+                renderer.texture_program(),
                 self.client_width,
                 self.client_height,
             );

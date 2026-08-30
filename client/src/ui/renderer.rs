@@ -1,5 +1,6 @@
 pub struct Renderer {
     program: gl::types::GLuint,
+    texture_program: gl::types::GLuint,
     window_width: u32,
     window_height: u32,
 }
@@ -7,8 +8,10 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(width: u32, height: u32) -> Result<Self, String> {
         let program = create_program()?;
+        let texture_program = create_texture_program()?;
         Ok(Self {
             program,
+            texture_program,
             window_width: width,
             window_height: height,
         })
@@ -24,6 +27,10 @@ impl Renderer {
 
     pub fn program(&self) -> gl::types::GLuint {
         self.program
+    }
+
+    pub fn texture_program(&self) -> gl::types::GLuint {
+        self.texture_program
     }
 
     pub fn window_width(&self) -> u32 {
@@ -58,9 +65,10 @@ fn create_program() -> Result<gl::types::GLuint, String> {
         gl::FRAGMENT_SHADER,
         r#"
         #version 330 core
+        uniform vec3 rect_color;
         out vec4 FragColor;
         void main() {
-            FragColor = vec4(0.2, 0.6, 1.0, 1.0);
+            FragColor = vec4(rect_color, 1.0);
         }
         "#,
     )?;
@@ -145,4 +153,51 @@ fn create_rectangle() -> Result<(gl::types::GLuint, gl::types::GLuint), String> 
     }
 
     Ok((vao, vbo))
+}
+
+fn create_texture_program() -> Result<gl::types::GLuint, String> {
+    let vertex_shader = compile_shader(
+        gl::VERTEX_SHADER,
+        r#"
+        #version 330 core
+        layout (location = 0) in vec2 position;
+        layout (location = 1) in vec2 texcoord;
+        out vec2 v_texcoord;
+        void main() {
+            gl_Position = vec4(position, 0.0, 1.0);
+            v_texcoord = texcoord;
+        }
+        "#,
+    )?;
+
+    let fragment_shader = compile_shader(
+        gl::FRAGMENT_SHADER,
+        r#"
+        #version 330 core
+        uniform sampler2D tex;
+        in vec2 v_texcoord;
+        out vec4 FragColor;
+        void main() {
+            FragColor = texture(tex, v_texcoord);
+        }
+        "#,
+    )?;
+
+    unsafe {
+        let program = gl::CreateProgram();
+        gl::AttachShader(program, vertex_shader);
+        gl::AttachShader(program, fragment_shader);
+        gl::LinkProgram(program);
+
+        let mut success = gl::FALSE as gl::types::GLint;
+        gl::GetProgramiv(program, gl::LINK_STATUS, &mut success);
+        if success == gl::FALSE as gl::types::GLint {
+            return Err("Texture program linking failed".to_string());
+        }
+
+        gl::DeleteShader(vertex_shader);
+        gl::DeleteShader(fragment_shader);
+
+        Ok(program)
+    }
 }
