@@ -1,6 +1,6 @@
-use crate::ui::rect::Rect;
-use crate::ui::rect_builder::RectBuilder;
+use crate::ui::elements::rect::Rect;
 use crate::ui::renderer::Renderer;
+use crate::ui::elements::text::Text;
 
 pub struct Ui {
     rects: Vec<Rect>,
@@ -41,8 +41,24 @@ impl Ui {
         self.client_height
     }
 
-    pub fn add_rect(&mut self, x: u32, y: u32, width: u32, height: u32) -> RectBuilder {
-        RectBuilder::new(self, x, y, width, height)
+    pub fn add_rect<F>(&mut self, x: u32, y: u32, width: u32, height: u32, configure: F) -> &mut Self
+    where
+        F: FnOnce(&mut Rect),
+    {
+        let mut rect = Rect::new(x, y, width, height);
+        configure(&mut rect);
+        self.new_rects.push(rect);
+        self
+    }
+
+    pub fn add_text<F>(&mut self, text: &str, configure: F) -> &mut Self
+    where
+        F: FnOnce(&mut Text),
+    {
+        let mut t = Text::new(text);
+        configure(&mut t);
+        // TODO: добавить в коллекцию текстов
+        self
     }
 
     pub fn push_rect(&mut self, rect: Rect) {
