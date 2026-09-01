@@ -1,194 +1,76 @@
-pub struct Text {
-    x: u32,
-    y: u32,
-    width: u32,
-    height: u32,
-    content: String,
-    bg_color: (f32, f32, f32),
-    content_dirty: bool,
-    quad_dirty: bool,
+use crate::ui::{elements::{base::BaseElement, widget::Widget}, renderer::Renderer};
+use std::{any::Any, ops::{Deref, DerefMut}};
 
-    fbo: Option<gl::types::GLuint>,
-    texture: Option<gl::types::GLuint>,
-    quad_vao: Option<gl::types::GLuint>,
-    quad_vbo: Option<gl::types::GLuint>,
+pub struct Text {
+    pub base: BaseElement,
+    pub content: String,
+    text_color: (f32, f32, f32),
 }
 
 impl Text {
     pub fn new(text: &str) -> Self {
+        let x = 0;
+        let y = 0;
+        let width = text.len() as u32 * 8;  // временно: 8px на символ
+        let height = 24;  // временно: высота строки
+
         Self {
-            x: 0,
-            y: 0,
-            width: 100,
-            height: 24,
+            base: BaseElement::new(x, y, width, height),
             content: text.to_string(),
-            bg_color: (0.3, 0.3, 0.3),
-            content_dirty: true,
-            quad_dirty: true,
-            fbo: None,
-            texture: None,
-            quad_vao: None,
-            quad_vbo: None,
+            text_color: (1.0, 1.0, 1.0),  // белый текст
         }
     }
 
-    pub fn set_background_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
-        let new_color = (
+    pub fn set_text_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
+        self.text_color = (
             r as f32 / 255.0,
             g as f32 / 255.0,
             b as f32 / 255.0,
         );
-        if self.bg_color != new_color {
-            self.bg_color = new_color;
-            self.content_dirty = true;
-        }
+        self.base.content_dirty = true;
         self
-    }
-
-    pub fn set_position(&mut self, x: u32, y: u32) {
-        if self.x != x || self.y != y {
-            self.x = x;
-            self.y = y;
-            self.quad_dirty = true;
-        }
-    }
-
-    pub fn draw(&mut self, texture_program: gl::types::GLuint, window_width: u32, window_height: u32) {
-        self.lazy_init();
-        if self.content_dirty {
-            self.full_redraw(window_width, window_height);
-        } else if self.quad_dirty {
-            self.redraw_position(window_width, window_height);
-        }
-        self.redraw(texture_program);
-    }
-
-    fn lazy_init(&mut self) {
-        if self.fbo.is_none() {
-            self.init_fbo();
-        }
-        if self.quad_vao.is_none() {
-            self.init_quad_buffers();
-        }
-    }
-
-    fn full_redraw(&mut self, window_width: u32, window_height: u32) {
-        self.render_to_fbo();
-        unsafe {
-            gl::Viewport(0, 0, window_width as i32, window_height as i32);
-        }
-        self.redraw_position(window_width, window_height);
-        self.content_dirty = false;
-    }
-
-    fn redraw_position(&mut self, window_width: u32, window_height: u32) {
-        let vertices = self.update_quad_vertices(window_width, window_height);
-        unsafe {
-            gl::BindVertexArray(self.quad_vao.unwrap());
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.quad_vbo.unwrap());
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
-                vertices.as_ptr() as *const gl::types::GLvoid,
-                gl::STATIC_DRAW,
-            );
-        }
-        self.quad_dirty = false;
-    }
-
-    fn redraw(&self, texture_program: gl::types::GLuint) {
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, self.texture.unwrap());
-            gl::UseProgram(texture_program);
-            gl::BindVertexArray(self.quad_vao.unwrap());
-            gl::DrawArrays(gl::TRIANGLES, 0, 6);
-            gl::BindVertexArray(0);
-        }
-    }
-
-    fn init_fbo(&mut self) {
-        let mut fbo = 0;
-        let mut texture = 0;
-        unsafe {
-            gl::GenFramebuffers(1, &mut fbo);
-            gl::GenTextures(1, &mut texture);
-            gl::BindTexture(gl::TEXTURE_2D, texture);
-            gl::TexImage2D(
-                gl::TEXTURE_2D, 0, gl::RGBA as i32,
-                self.width as i32, self.height as i32, 0,
-                gl::RGBA, gl::UNSIGNED_BYTE, std::ptr::null(),
-            );
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
-            gl::FramebufferTexture2D(
-                gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0,
-                gl::TEXTURE_2D, texture, 0,
-            );
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        }
-        self.fbo = Some(fbo);
-        self.texture = Some(texture);
-    }
-
-    fn render_to_fbo(&self) {
-        unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo.unwrap());
-            gl::Viewport(0, 0, self.width as i32, self.height as i32);
-            gl::ClearColor(self.bg_color.0, self.bg_color.1, self.bg_color.2, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        }
-    }
-
-    fn init_quad_buffers(&mut self) {
-        let mut quad_vao = 0;
-        let mut quad_vbo = 0;
-        unsafe {
-            gl::GenVertexArrays(1, &mut quad_vao);
-            gl::GenBuffers(1, &mut quad_vbo);
-            gl::BindVertexArray(quad_vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, quad_vbo);
-            gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, 4 * std::mem::size_of::<f32>() as gl::types::GLsizei, std::ptr::null());
-            gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 4 * std::mem::size_of::<f32>() as gl::types::GLsizei, (2 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid);
-            gl::EnableVertexAttribArray(1);
-            gl::BindVertexArray(0);
-        }
-        self.quad_vao = Some(quad_vao);
-        self.quad_vbo = Some(quad_vbo);
-    }
-
-    fn update_quad_vertices(&self, window_width: u32, window_height: u32) -> [f32; 24] {
-        let w = window_width as f32;
-        let h = window_height as f32;
-        let x = self.x as f32;
-        let y = self.y as f32;
-        let width = self.width as f32;
-        let height = self.height as f32;
-        let left = (x / w) * 2.0 - 1.0;
-        let right = ((x + width) / w) * 2.0 - 1.0;
-        let top = 1.0 - (y / h) * 2.0;
-        let bottom = 1.0 - ((y + height) / h) * 2.0;
-        [
-            left, top, 0.0, 0.0,
-            left, bottom, 0.0, 1.0,
-            right, bottom, 1.0, 1.0,
-            left, top, 0.0, 0.0,
-            right, bottom, 1.0, 1.0,
-            right, top, 1.0, 0.0,
-        ]
     }
 }
 
-impl Drop for Text {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(fbo) = self.fbo { gl::DeleteFramebuffers(1, &fbo); }
-            if let Some(texture) = self.texture { gl::DeleteTextures(1, &texture); }
-            if let Some(vao) = self.quad_vao { gl::DeleteVertexArrays(1, &vao); }
-            if let Some(vbo) = self.quad_vbo { gl::DeleteBuffers(1, &vbo); }
+impl Widget for Text {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn base(&self) -> &BaseElement {
+        &self.base
+    }
+    
+    fn update_from(&mut self, other: &dyn Widget) {
+        if let Some(other_text) = other.as_any().downcast_ref::<Text>() {
+            self.base.update_from(&other_text.base);
+            
+            if self.content != other_text.content {
+                self.content = other_text.content.clone();
+                self.base.content_dirty = true;
+            }
         }
+    }
+    
+    fn mark_quad_dirty(&mut self) {
+        self.base.mark_quad_dirty();
+    }
+    
+    fn draw(&mut self, texture_program: gl::types::GLuint, win_w: u32, win_h: u32) {
+        self.base.draw(texture_program, win_w, win_h);
+    }
+}
+
+impl Deref for Text {
+    type Target = BaseElement;
+
+    fn deref(&self) -> &BaseElement {
+        &self.base
+    }
+}
+
+impl DerefMut for Text {
+    fn deref_mut(&mut self) -> &mut BaseElement {
+        &mut self.base
     }
 }

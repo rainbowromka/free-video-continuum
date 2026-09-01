@@ -1,5 +1,5 @@
-use crate::ui::elements::{base::{BaseElement}};
-use std::ops::{Deref, DerefMut};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}, renderer::Renderer};
+use std::{any::Any, ops::{Deref, DerefMut}};
 
 pub struct Rect {
     pub base: BaseElement,
@@ -10,7 +10,31 @@ impl Rect {
         Self {
             base: BaseElement::new(x, y, width, height)
         }
+    }
+}
+
+impl Widget for Rect {    
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    
+    fn base(&self) -> &BaseElement {
+        &self.base
     }    
+    
+    fn update_from(&mut self, other: &dyn Widget) {
+        if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
+            self.base.update_from(&other_rect.base);
+        }    
+    }            
+    
+    fn mark_quad_dirty(&mut self) {
+        self.base.mark_quad_dirty();
+    }        
+    
+    fn draw(&mut self, texture_program: gl::types::GLuint, win_w: u32, win_h: u32) {
+        self.base.draw(texture_program, win_w, win_h);
+    }
 }
 
 impl Deref for Rect {
@@ -26,24 +50,3 @@ impl DerefMut for Rect {
         &mut self.base
     }
 }
-
-impl PartialEq for Rect {
-    fn eq(&self, other: &Self) -> bool {
-        self.base == other.base
-    }
-}
-
-// impl Widget for Rect {
-//     // fn set_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
-//     //     self.base.set_color(r, g, b);
-//     //     self    
-//     // }
-
-//     // pub fn mark_quad_dirty(&mut self) {
-//     //     self.base.mark_quad_dirty();
-//     // }
-
-//     // pub fn update_from(&mut self, new: BaseElement) {
-//     //     self.base.update_from(new);
-//     // }    
-// }

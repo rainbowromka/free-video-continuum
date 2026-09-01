@@ -160,7 +160,7 @@ impl BaseElement {
         ]
     }
 
-    pub fn update_from(&mut self, new: BaseElement) {
+    pub fn update_from(&mut self, new: &BaseElement) {
         // Позиция изменилась
         if self.x != new.x || self.y != new.y {
             self.x = new.x;
@@ -294,7 +294,7 @@ impl BaseElement {
         self.quad_vbo = Some(quad_vbo);
     }    
 
-    pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
+    pub fn set_color(&mut self, r: u8, g: u8, b: u8) {
         let new_color = (
             r as f32 / 255.0,
             g as f32 / 255.0,
@@ -304,7 +304,6 @@ impl BaseElement {
             self.color = new_color;
             self.content_dirty = true;
         }
-        self
     }
 
     pub fn color(&self) -> (f32, f32, f32) {
@@ -328,15 +327,5 @@ impl Drop for BaseElement {
                 gl::DeleteBuffers(1, &vbo);
             }
         }
-    }
-}
-
-impl PartialEq for BaseElement {
-    fn eq(&self, other: &Self) -> bool {
-        self.x == other.x
-            && self.y == other.y
-            && self.width == other.width
-            && self.height == other.height
-            && self.color == other.color
     }
 }

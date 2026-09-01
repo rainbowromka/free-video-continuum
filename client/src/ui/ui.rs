@@ -1,10 +1,11 @@
 use crate::ui::elements::rect::Rect;
+use crate::ui::elements::widget::Widget;
 use crate::ui::renderer::Renderer;
 use crate::ui::elements::text::Text;
 
 pub struct Ui {
-    rects: Vec<Rect>,
-    new_rects: Vec<Rect>,
+    elements: Vec<Box<dyn Widget>>,
+    new_elements: Vec<Box<dyn Widget>>,
     client_width: u32,
     client_height: u32,
     bg_color: (f32, f32, f32),
@@ -13,8 +14,8 @@ pub struct Ui {
 impl Ui {
     pub fn new(client_width: u32, client_height: u32) -> Self {
         Self {
-            rects: Vec::new(),
-            new_rects: Vec::new(),
+            elements: Vec::new(),
+            new_elements: Vec::new(),
             client_width,
             client_height,
             bg_color: hex_to_rgb(0x16, 0x19, 0x20),
@@ -25,10 +26,10 @@ impl Ui {
         self.client_width = client_width;
         self.client_height = client_height;
 
-        for rect in &mut self.rects {
+        for rect in &mut self.elements {
             rect.mark_quad_dirty();
         }
-        for rect in &mut self.new_rects {
+        for rect in &mut self.new_elements {
             rect.mark_quad_dirty();
         }
     }
@@ -47,7 +48,7 @@ impl Ui {
     {
         let mut rect = Rect::new(x, y, width, height);
         configure(&mut rect);
-        self.new_rects.push(rect);
+        self.new_elements.push(Box::new(rect));        
         self
     }
 
@@ -56,40 +57,38 @@ impl Ui {
         F: FnOnce(&mut Text),
     {
         let mut t = Text::new(text);
-        configure(&mut t);
+        configure(&mut t);        
+        self.new_elements.push(Box::new(t));
         // TODO: добавить в коллекцию текстов
         self
     }
 
-    pub fn push_rect(&mut self, rect: Rect) {
-        self.new_rects.push(rect);
-    }
-
     pub fn render(&mut self, renderer: &Renderer) {
-        let new_count = self.new_rects.len();
+        let new_count = self.new_elements.len();
 
         // Проходим по новым Rect'ам
-        for (index, new_rect) in self.new_rects.drain(..).enumerate() {
-            if index < self.rects.len() {
-                // Есть старый Rect — сравниваем
-                let old_rect = &mut self.rects[index];
+        for (index, new_element) in self.new_elements.drain(..).enumerate() {
+            if index < self.elements.len() {
+                let old = &mut self.elements[index];
 
-                if old_rect != &new_rect {
-                    // Что-то изменилось — обновляем только изменения
-                    old_rect.update_from(new_rect);
+                if old.as_any().type_id() == new_element.as_any().type_id() {
+                    old.update_from(new_element.as_ref());
+                } else {
+                
+                    *old = new_element;
                 }
-                // Если равны — старый остаётся без изменений
+
             } else {
                 // Новый Rect — добавляем
-                self.rects.push(new_rect);
+                self.elements.push(new_element);
             }
         }
 
         // Удаляем лишние старые Rect'ы (если новых меньше)
-        self.rects.truncate(new_count);
+        self.elements.truncate(new_count);
 
         // Рендерим
-        for rect in &mut self.rects {
+        for rect in &mut self.elements {
             rect.draw(
                 renderer.texture_program(),
                 self.client_width,
@@ -97,7 +96,7 @@ impl Ui {
             );
         }
 
-        self.new_rects.clear();
+        self.new_elements.clear();
     }
 
     pub fn set_client_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
