@@ -118,7 +118,7 @@ impl BaseElement {
         self.texture = Some(texture);
     }
 
-        fn redraw_position(&mut self, window_width: u32, window_height: u32) {
+    pub fn redraw_position(&mut self, window_width: u32, window_height: u32) {
         let vertices = self.update_quad_vertices(window_width, window_height);
 
         unsafe {
@@ -201,7 +201,7 @@ impl BaseElement {
         self.redraw(texture_program);
     }
 
-    fn lazy_init(&mut self) {
+    pub fn lazy_init(&mut self) {
         if self.fbo.is_none() {
             self.init_fbo();
         }
@@ -225,7 +225,7 @@ impl BaseElement {
         self.content_dirty = false;
     }
 
-    fn redraw(&self, texture_program: gl::types::GLuint) {
+    pub fn redraw(&self, texture_program: gl::types::GLuint) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, self.texture.unwrap());

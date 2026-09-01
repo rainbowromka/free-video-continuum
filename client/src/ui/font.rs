@@ -1,4 +1,5 @@
 use rusttype::{Font, Scale};
+use lazy_static::lazy_static;
 
 pub struct FontManager {
     font: Font<'static>,
@@ -58,4 +59,9 @@ impl FontManager {
 
         (bitmap, width, height)
     }
+}
+
+
+lazy_static! {
+    pub static ref FONT_MANAGER: FontManager = FontManager::new();
 }

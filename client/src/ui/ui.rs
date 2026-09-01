@@ -1,5 +1,6 @@
 use crate::ui::elements::rect::Rect;
 use crate::ui::elements::widget::Widget;
+use crate::ui::font::FontManager;
 use crate::ui::renderer::Renderer;
 use crate::ui::elements::text::Text;
 
@@ -9,6 +10,7 @@ pub struct Ui {
     client_width: u32,
     client_height: u32,
     bg_color: (f32, f32, f32),
+    font_manager: FontManager,
 }
 
 impl Ui {
@@ -19,7 +21,12 @@ impl Ui {
             client_width,
             client_height,
             bg_color: hex_to_rgb(0x16, 0x19, 0x20),
+            font_manager: FontManager::new(),
         }
+    }
+
+    pub fn font_manager(&self) -> &FontManager {
+        &self.font_manager
     }
 
     pub fn resize(&mut self, client_width: u32, client_height: u32) {
@@ -47,7 +54,7 @@ impl Ui {
         F: FnOnce(&mut Rect),
     {
         let mut rect = Rect::new(x, y, width, height);
-        configure(&mut rect);
+        configure(&mut rect);        
         self.new_elements.push(Box::new(rect));        
         self
     }
@@ -56,7 +63,7 @@ impl Ui {
     where
         F: FnOnce(&mut Text),
     {
-        let mut t = Text::new(text);
+        let mut t = Text::new(text);        
         configure(&mut t);        
         self.new_elements.push(Box::new(t));
         // TODO: добавить в коллекцию текстов
@@ -73,8 +80,7 @@ impl Ui {
 
                 if old.as_any().type_id() == new_element.as_any().type_id() {
                     old.update_from(new_element.as_ref());
-                } else {
-                
+                } else {                
                     *old = new_element;
                 }
 
