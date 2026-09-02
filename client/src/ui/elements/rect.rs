@@ -1,4 +1,4 @@
-use crate::ui::{elements::{base::BaseElement, widget::Widget}, renderer::Renderer};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 
 pub struct Rect {
@@ -32,8 +32,8 @@ impl Widget for Rect {
         self.base.mark_quad_dirty();
     }        
     
-    fn draw(&mut self, texture_program: gl::types::GLuint, win_w: u32, win_h: u32) {
-        self.base.draw(texture_program, win_w, win_h);
+    fn draw(&mut self, win_w: u32, win_h: u32) {
+        self.base.draw(win_w, win_h);
     }
 }
 

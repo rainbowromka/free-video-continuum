@@ -1,7 +1,7 @@
 use crate::ui::elements::rect::Rect;
 use crate::ui::elements::widget::Widget;
 use crate::ui::font::FontManager;
-use crate::ui::renderer::Renderer;
+use crate::ui::render::renderer::Renderer;
 use crate::ui::elements::text::Text;
 
 pub struct Ui {
@@ -95,11 +95,7 @@ impl Ui {
 
         // Рендерим
         for rect in &mut self.elements {
-            rect.draw(
-                renderer.texture_program(),
-                self.client_width,
-                self.client_height,
-            );
+            rect.draw(self.client_width,self.client_height);
         }
 
         self.new_elements.clear();

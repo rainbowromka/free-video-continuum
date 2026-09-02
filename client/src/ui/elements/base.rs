@@ -1,3 +1,5 @@
+use crate::ui::render::shader::TEXTURE_PROGRAM;
+
 pub struct BaseElement {
     pub x: u32,
     pub y: u32,
@@ -184,7 +186,7 @@ impl BaseElement {
         }
     }
 
-    pub fn draw(&mut self, texture_program: gl::types::GLuint, window_width: u32, window_height: u32) {
+    pub fn draw(&mut self, window_width: u32, window_height: u32) {
         // Ленивая инициализация
         self.lazy_init();
 
@@ -198,7 +200,7 @@ impl BaseElement {
         }
 
         // Всегда отображаем готовую текстуру
-        self.redraw(texture_program);
+        self.redraw(*TEXTURE_PROGRAM);
     }
 
     pub fn lazy_init(&mut self) {

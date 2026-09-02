@@ -21,9 +21,10 @@ fn main() {
             .add_rect(w - 300, 0, 300, h, |rect| {
                 rect.set_color(0x27, 0x2a, 0x31);
             })
-            .add_text("[d] Mamay", |text| {                
-                text.set_position(200, 20);
-                text.set_color(0x00, 0x00, 0x00);
+            .add_text("[d]Mamay", |text| {                
+                text.set_position(20, 20);
+                text.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
+                text.set_color(0x37, 0x3a, 0x41);  // белый текст
             })
             ;
         })

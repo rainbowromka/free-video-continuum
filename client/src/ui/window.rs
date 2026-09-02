@@ -1,4 +1,4 @@
-use crate::ui::renderer::Renderer;
+use crate::ui::render::renderer::Renderer;
 use crate::ui::ui::Ui;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};

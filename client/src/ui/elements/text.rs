@@ -1,6 +1,10 @@
-use crate::ui::{elements::{base::BaseElement, widget::Widget}};
+use crate::ui::{
+    elements::{base::BaseElement, widget::Widget},
+    render::shader::{TEXTURE_PROGRAM,TEXT_PROGRAM}
+};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::font::FONT_MANAGER;
+
 
 pub struct Text {
     pub base: BaseElement,
@@ -13,7 +17,7 @@ impl Text {
         let mut text = Self {
             base: BaseElement::new(0, 0, content.len() as u32 * 16, 32),
             content: content.to_string(),
-            text_color: (0.0, 0.0, 0.0),
+            text_color: (1.0, 1.0, 1.0),
         };
         text.set_color(0xff, 0xff, 0xff);
         text
@@ -59,36 +63,78 @@ impl Text {
     fn render_text(&self) {
         let font_manager = &*FONT_MANAGER;
 
-        // Растеризуем текст в битмап
         let size = self.base.height as f32;
         let (bitmap, width, height) = font_manager.rasterize_text(&self.content, size);
-
+        
+        // println!("Text render: width={}, height={}, content='{}'", width, height, self.content);
         if width == 0 || height == 0 {
-            return;  // пустой текст — нечего рисовать
+            return;
         }
 
-        // Создаём текстуру из битмапа
         let mut texture = 0;
         unsafe {
             gl::GenTextures(1, &mut texture);
             gl::BindTexture(gl::TEXTURE_2D, texture);
             gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGBA as i32,
-                width as i32,
-                height as i32,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
+                gl::TEXTURE_2D, 0, gl::RGBA as i32,
+                width as i32, height as i32, 0,
+                gl::RGBA, gl::UNSIGNED_BYTE,
                 bitmap.as_ptr() as *const _,
             );
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-        }
 
-        // TODO: отобразить текстуру в FBO
-        // Нужен шейдер и quad для отрисовки
+            // Включаем альфа-смешивание
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+
+            // Используем TEXT_PROGRAM
+            gl::UseProgram(*TEXT_PROGRAM);
+
+            // Передаём цвет текста в шейдер
+            let color_location = gl::GetUniformLocation(
+                *TEXT_PROGRAM,
+                b"text_color\0".as_ptr() as *const gl::types::GLchar,
+            );
+            gl::Uniform3f(
+                color_location,
+                self.text_color.0,
+                self.text_color.1,
+                self.text_color.2,
+            );
+
+            // Привязываем текстуру
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, texture);
+
+            // Рисуем quad на весь FBO
+            gl::BindVertexArray(self.base.quad_vao.unwrap());
+
+
+            let vertices: [f32; 24] = [
+                -1.0, 1.0, 0.0, 1.0,    // верхний левый → V=1
+                -1.0, -1.0, 0.0, 0.0,   // нижний левый → V=0
+                1.0, -1.0, 1.0, 0.0,    // нижний правый → V=0
+                -1.0, 1.0, 0.0, 1.0,    // верхний левый → V=1
+                1.0, -1.0, 1.0, 0.0,    // нижний правый → V=0
+                1.0, 1.0, 1.0, 1.0,     // верхний правый → V=1
+            ];
+
+            gl::BindVertexArray(self.base.quad_vao.unwrap());
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+                vertices.as_ptr() as *const gl::types::GLvoid,
+                gl::STATIC_DRAW,
+            );
+
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+            gl::BindVertexArray(0);
+
+            // Удаляем временную текстуру
+            gl::DeleteTextures(1, &texture);
+        }
     }
 }
 
@@ -116,10 +162,11 @@ impl Widget for Text {
         self.base.mark_quad_dirty();
     }
     
-    fn draw(&mut self, texture_program: gl::types::GLuint, win_w: u32, win_h: u32) {
+    fn draw(&mut self, win_w: u32, win_h: u32) {
         self.base.lazy_init();
 
         if self.base.content_dirty {
+            println!("[Text] Перерисовка содержимого: '{}'", self.content);
             self.render_to_fbo();  // ← своя реализация для Text
             unsafe {
                 gl::Viewport(0, 0, win_w as i32, win_h as i32);
@@ -129,11 +176,15 @@ impl Widget for Text {
         }
         // 3. Если позиция изменилась
         else if self.base.quad_dirty {
+            println!("[Text] Перерисовка позиции: '{}'", self.content);
             self.base.redraw_position(win_w, win_h);
+        }
+        else {
+            println!("[Text] Без изменений: '{}'", self.content);
         }
 
         // 4. Отображаем текстуру на экран
-        self.base.redraw(texture_program);
+        self.base.redraw(*TEXTURE_PROGRAM);
     }
 }
 
