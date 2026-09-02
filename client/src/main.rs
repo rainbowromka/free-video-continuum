@@ -2,7 +2,8 @@ mod ui;
 
 use ui::window::Window;
 
-use crate::ui::ui::Ui;
+use crate::ui::{elements::{rect::Rect, text::Text}, ui::Ui};
+use crate::ui::elements::common::AddElement;
 
 fn main() {
     Window::new()
@@ -14,18 +15,28 @@ fn main() {
             let w = ui.client_width();
             let h = ui.client_height();
 
-
-            ui.add_rect(0, 0, 390, h, |rect| {
+            ui.add::<Rect>(|rect| {
+                rect.set_rect(0, 0, 390, h);
+                rect.set_color(0x27, 0x2a, 0x31);
+                rect.add::<Text>(|text| {                
+                    text.set_content("[d]Mamay");
+                    text.set_position(10, 20);
+                    text.set_height(16);
+                    text.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
+                    text.set_color(0x37, 0x3a, 0x41);  // белый текст
+                });
+            })
+            .add::<Rect>(|rect| {
+                rect.set_rect(w - 300, 0, 300, h, );
                 rect.set_color(0x27, 0x2a, 0x31);
             })
-            .add_rect(w - 300, 0, 300, h, |rect| {
-                rect.set_color(0x27, 0x2a, 0x31);
-            })
-            .add_text("[d]Mamay", |text| {                
-                text.set_position(20, 20);
-                text.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
-                text.set_color(0x37, 0x3a, 0x41);  // белый текст
-            })
+            // .add::<Text>(|text| {                
+            //     text.set_content("[d]Mamay");
+            //     text.set_position(10, 20);
+            //     text.set_height(16);
+            //     text.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
+            //     text.set_color(0x37, 0x3a, 0x41);  // белый текст
+            // })
             ;
         })
         .run();

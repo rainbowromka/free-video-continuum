@@ -44,12 +44,12 @@ impl BaseElement {
         if self.width != width || self.height != height {
             self.width = width;
             self.height = height;
-            self.recreate_fbo();
-            self.content_dirty = true;
-            self.quad_dirty = true;
+            // self.recreate_fbo();
+            // self.content_dirty = true;
+            // self.quad_dirty = true;
         }
     }
-    
+
     pub fn mark_quad_dirty(&mut self) {
         self.quad_dirty = true;
     }
@@ -66,10 +66,10 @@ impl BaseElement {
             }
         }
 
-    self.init_fbo();
+        self.init_fbo();
     }
 
-        fn init_fbo(&mut self) {
+    fn init_fbo(&mut self) {
         let mut fbo = 0;
         let mut texture = 0;
 
@@ -137,7 +137,7 @@ impl BaseElement {
         self.quad_dirty = false;
     }
 
-    fn update_quad_vertices(&self, window_width: u32, window_height: u32) -> [f32; 24] {
+    pub fn update_quad_vertices(&self, window_width: u32, window_height: u32) -> [f32; 24] {
         let w = window_width as f32;
         let h = window_height as f32;
         let x = self.x as f32;

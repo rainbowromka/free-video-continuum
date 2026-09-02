@@ -1,8 +1,5 @@
-use crate::ui::elements::rect::Rect;
-use crate::ui::elements::widget::Widget;
-use crate::ui::font::FontManager;
+use crate::ui::elements::common::{AddElement, Widget};
 use crate::ui::render::renderer::Renderer;
-use crate::ui::elements::text::Text;
 
 pub struct Ui {
     elements: Vec<Box<dyn Widget>>,
@@ -10,7 +7,6 @@ pub struct Ui {
     client_width: u32,
     client_height: u32,
     bg_color: (f32, f32, f32),
-    font_manager: FontManager,
 }
 
 impl Ui {
@@ -21,12 +17,7 @@ impl Ui {
             client_width,
             client_height,
             bg_color: hex_to_rgb(0x16, 0x19, 0x20),
-            font_manager: FontManager::new(),
         }
-    }
-
-    pub fn font_manager(&self) -> &FontManager {
-        &self.font_manager
     }
 
     pub fn resize(&mut self, client_width: u32, client_height: u32) {
@@ -47,27 +38,6 @@ impl Ui {
 
     pub fn client_height(&self) -> u32 {
         self.client_height
-    }
-
-    pub fn add_rect<F>(&mut self, x: u32, y: u32, width: u32, height: u32, configure: F) -> &mut Self
-    where
-        F: FnOnce(&mut Rect),
-    {
-        let mut rect = Rect::new(x, y, width, height);
-        configure(&mut rect);        
-        self.new_elements.push(Box::new(rect));        
-        self
-    }
-
-    pub fn add_text<F>(&mut self, text: &str, configure: F) -> &mut Self
-    where
-        F: FnOnce(&mut Text),
-    {
-        let mut t = Text::new(text);        
-        configure(&mut t);        
-        self.new_elements.push(Box::new(t));
-        // TODO: добавить в коллекцию текстов
-        self
     }
 
     pub fn render(&mut self, renderer: &Renderer) {
@@ -94,8 +64,9 @@ impl Ui {
         self.elements.truncate(new_count);
 
         // Рендерим
-        for rect in &mut self.elements {
-            rect.draw(self.client_width,self.client_height);
+        for element in &mut self.elements {
+            element.create_textures();            
+            element.put_textures(self.client_width,self.client_height);
         }
 
         self.new_elements.clear();
@@ -113,4 +84,16 @@ impl Ui {
 
 fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
+}
+
+impl AddElement for Ui {
+    fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
+    where
+        T: Widget + Default + 'static,
+    {
+        let mut element = T::default();
+        configure(&mut element);
+        self.new_elements.push(Box::new(element));
+        self
+    }
 }

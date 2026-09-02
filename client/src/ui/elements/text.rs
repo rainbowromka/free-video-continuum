@@ -1,5 +1,5 @@
 use crate::ui::{
-    elements::{base::BaseElement, widget::Widget},
+    elements::{base::BaseElement, common::Widget},
     render::shader::{TEXTURE_PROGRAM,TEXT_PROGRAM}
 };
 use std::{any::Any, ops::{Deref, DerefMut}};
@@ -37,9 +37,30 @@ impl Text {
         self.base.set_color(r, g, b);
         self
     }
+
+    pub fn set_height(&mut self, height: u32) -> &mut Self {
+        if self.base.height != height {
+            self.base.height = height;
+            
+            // Пересчитываем ширину из текста
+            let (width, _) = FONT_MANAGER.measure_text(&self.content, height as f32);
+            self.base.width = width;
+            
+            // self.base.recreate_fbo();
+            // self.base.content_dirty = true;
+            // self.base.quad_dirty = true;
+        }
+        self
+    }
+
 }
 
 impl Text {
+    pub fn set_content(&mut self, content: &str) -> &mut Self {
+        self.content = content.to_string();
+        self
+    }
+
     fn render_to_fbo(&self) {
         unsafe {
             gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
@@ -161,30 +182,57 @@ impl Widget for Text {
     fn mark_quad_dirty(&mut self) {
         self.base.mark_quad_dirty();
     }
-    
-    fn draw(&mut self, win_w: u32, win_h: u32) {
+
+    fn create_textures(&mut self) {
         self.base.lazy_init();
 
         if self.base.content_dirty {
-            println!("[Text] Перерисовка содержимого: '{}'", self.content);
-            self.render_to_fbo();  // ← своя реализация для Text
+            // Bind Text FBO
             unsafe {
-                gl::Viewport(0, 0, win_w as i32, win_h as i32);
+                gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
+                gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
+
+                // Фон
+                gl::ClearColor(
+                    self.base.color().0,
+                    self.base.color().1,
+                    self.base.color().2,
+                    1.0,
+                );
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+
+                // Растеризация и отрисовка текста
+                self.render_text();
+
+                gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             }
-            self.base.redraw_position(win_w, win_h);
+
             self.base.content_dirty = false;
         }
-        // 3. Если позиция изменилась
-        else if self.base.quad_dirty {
-            println!("[Text] Перерисовка позиции: '{}'", self.content);
-            self.base.redraw_position(win_w, win_h);
-        }
-        else {
-            println!("[Text] Без изменений: '{}'", self.content);
-        }
+    }
 
-        // 4. Отображаем текстуру на экран
-        self.base.redraw(*TEXTURE_PROGRAM);
+    fn put_textures(&self, parent_w: u32, parent_h: u32) {
+        // Рисуем готовую текстуру Text'а в родителя
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, self.base.texture.unwrap());
+            gl::UseProgram(*TEXTURE_PROGRAM);
+
+            // Обновляем quad с позицией в родителе
+            let vertices = self.base.update_quad_vertices(parent_w, parent_h);
+
+            gl::BindVertexArray(self.base.quad_vao.unwrap());
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+                vertices.as_ptr() as *const gl::types::GLvoid,
+                gl::STATIC_DRAW,
+            );
+
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+            gl::BindVertexArray(0);
+        }
     }
 }
 
@@ -199,5 +247,11 @@ impl Deref for Text {
 impl DerefMut for Text {
     fn deref_mut(&mut self) -> &mut BaseElement {
         &mut self.base
+    }
+}
+
+impl Default for Text {
+    fn default() -> Self {
+        Text::new("")
     }
 }
