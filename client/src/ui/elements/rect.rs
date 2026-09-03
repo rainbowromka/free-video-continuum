@@ -1,4 +1,4 @@
-use crate::ui::elements::{self, base::BaseElement, common::{AddElement, Widget}};
+use crate::ui::elements::{base::BaseElement, common::{AddElement, Widget}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
@@ -33,58 +33,33 @@ impl Widget for Rect {
         &self.base
     }    
     
-    // fn update_from(&mut self, other: &dyn Widget) {
-    //     if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
-    //         self.base.update_from(&other_rect.base);
-    //     }    
-    // }        
-
     fn update_from(&mut self, other: &dyn Widget) {
         if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
             self.base.update_from(&other_rect.base);
-            
-            // Если размер Rect изменился — дети должны перерисоваться
-            if self.base.width != other_rect.base.width || 
-            self.base.height != other_rect.base.height {
-                for child in &mut self.children {
-                    child.mark_quad_dirty();
-                }
-            }
         }
     }    
     
-    fn mark_quad_dirty(&mut self) {
-        self.base.mark_quad_dirty();
-    }      
-
-    fn mark_content_dirty(&mut self) {
-        self.base.mark_content_dirty();
+    fn mark_dirty(&mut self) {
+        self.base.mark_dirty();
     }      
 
     fn create_textures(&mut self) -> bool {
-        let mut result = false;
+        let mut dirty = false;
         
         for element in &mut self.children {
             if element.create_textures() {
-                result = true;
+                dirty = true;
             }
         }
 
-        if result {
-            self.base.mark_quad_dirty();
-            self.base.mark_content_dirty();
+        if dirty {
+            self.base.mark_dirty();
         }
 
         // Рисуем свой FBO
         self.base.lazy_init();
 
-        println!("Rect create_textures: content_dirty={}, size={}x{}", 
-            self.base.content_dirty, 
-            self.base.width, 
-            self.base.height
-        );
-
-        if self.base.content_dirty {
+        if self.base.dirty {
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
                 gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
@@ -106,20 +81,13 @@ impl Widget for Rect {
 
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             }
-
-            self.base.content_dirty = false;
-
-            result = true;
         }
 
-        result
+        dirty
     }
 
     fn draw(&mut self, parent_w: u32, parent_h: u32) {
-        println!("Rect draw: x={}, y={}, w={}, h={}, parent={}x{}",
-            self.base.x, self.base.y, self.base.width, self.base.height, parent_w, parent_h);
-
-        if self.base.quad_dirty {
+        if self.base.dirty {
             let vertices = self.base.update_quad_vertices(parent_w, parent_h);
 
             unsafe {
@@ -133,7 +101,7 @@ impl Widget for Rect {
                 );
             }
 
-            self.base.quad_dirty = false;
+            self.base.dirty = false;
         }
 
         unsafe {
@@ -146,14 +114,16 @@ impl Widget for Rect {
         }
     }
 
-    fn is_content_dirty(&self) -> bool
+    fn is_dirty(&self) -> bool
     {
-        self.base.content_dirty
+        self.base.dirty
     }
 
-    fn is_quad_dirty(&self) -> bool
-    {
-        self.base.quad_dirty
+    fn mark_dirty_recursive(&mut self) {
+        self.base.mark_dirty();
+        for child in &mut self.children {
+            child.mark_dirty_recursive();
+        }
     }
 }
 

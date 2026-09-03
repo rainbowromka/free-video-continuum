@@ -5,10 +5,9 @@ pub trait Widget {
     fn as_any(&self) -> &dyn Any;
     fn base(&self) -> &BaseElement;
     fn update_from(&mut self, other: &dyn Widget);
-    fn mark_quad_dirty(&mut self); 
-    fn mark_content_dirty(&mut self); 
-    fn is_content_dirty(&self) -> bool;
-    fn is_quad_dirty(&self) -> bool;
+    fn mark_dirty(&mut self); 
+    fn mark_dirty_recursive(&mut self);
+    fn is_dirty(&self) -> bool;
     fn create_textures(&mut self) -> bool;
     fn draw(&mut self, parent_w: u32, parent_h: u32);
 }

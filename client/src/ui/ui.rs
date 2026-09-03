@@ -1,6 +1,5 @@
-use crate::ui::elements;
 use crate::ui::elements::common::{AddElement, Widget};
-use crate::ui::render::renderer::Renderer;
+
 
 pub struct Ui {
     elements: Vec<Box<dyn Widget>>,
@@ -20,18 +19,21 @@ impl Ui {
             bg_color: hex_to_rgb(0x16, 0x19, 0x20),
         }
     }
+    
+    pub fn update_size(&mut self, w: u32, h: u32) {
+        self.client_width = w;
+        self.client_height = h;
+    }
 
-    pub fn resize(&mut self, client_width: u32, client_height: u32) {
-        self.client_width = client_width;
-        self.client_height = client_height;
+    pub fn resize(&mut self, w: u32, h: u32) {
+        self.update_size(w, h);
 
-        for rect in &mut self.elements {
-            rect.mark_quad_dirty();
-            rect.mark_content_dirty();  // ← добавить
+        // Помечаем всё рекурсивно dirty
+        for element in &mut self.elements {
+            element.mark_dirty_recursive();
         }
-        for rect in &mut self.new_elements {
-            rect.mark_quad_dirty();
-            rect.mark_content_dirty();  // ← добавить
+        for element in &mut self.new_elements {
+            element.mark_dirty_recursive();
         }
     }
 
@@ -43,7 +45,7 @@ impl Ui {
         self.client_height
     }
 
-    pub fn render(&mut self, renderer: &Renderer) {
+    pub fn render(&mut self) {
         let new_count = self.new_elements.len();
 
         // Проходим по новым Rect'ам
@@ -74,7 +76,6 @@ impl Ui {
     pub fn draw(&mut self) {
         // Сначала подготовили текстуры
         for element in &mut self.elements {
-            println!("client: {}x{}", self.client_width, self.client_height);
             element.create_textures();
         }
 

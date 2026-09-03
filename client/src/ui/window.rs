@@ -1,4 +1,3 @@
-use crate::ui::render::renderer::Renderer;
 use crate::ui::ui::Ui;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
@@ -65,7 +64,6 @@ impl Window {
 
         gl::load_with(|ptr| gl_context.get_proc_address(ptr) as *const _);
 
-        let mut renderer = Renderer::new(self.width, self.height).expect("Cannot create renderer");
         
         let mut ui = Ui::new(self.width, self.height);
         ui.set_client_color(self.client_color.0, self.client_color.1, self.client_color.2);
@@ -81,22 +79,17 @@ impl Window {
                     WindowEvent::Resized(physical_size) => {
                         gl_context.resize(physical_size);
                         ui.resize(physical_size.width, physical_size.height);
-                        renderer.resize(physical_size.width, physical_size.height);
                     }
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     _ => (),
                 },
                 Event::RedrawRequested(_) => {
                     let size = gl_context.window().inner_size();
-                    ui.resize(size.width, size.height);
-                    renderer.resize(size.width, size.height);
-
+                    ui.update_size(size.width, size.height);  // только размеры, без dirty
+                    
                     on_draw(&mut ui);
 
-                    let bg = ui.bg_color();
-                    renderer.clear(bg.0, bg.1, bg.2);                    
-
-                    ui.render(&renderer);
+                    ui.render();
                     gl_context.swap_buffers().unwrap();
                 }
                 _ => (),

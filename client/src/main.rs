@@ -14,31 +14,46 @@ fn main() {
             
             let w = ui.client_width();
             let h = ui.client_height();
-            println!("w={}, h={}", w, h);
 
-            ui.add::<Rect>(|rect| {
-                rect.set_rect(0, 0, 390, h);
-                rect.set_color(0x27, 0x2a, 0x31);
-                rect.add::<Text>(|text| {                
-                    text.set_content("[d]Mamay");
-                    text.set_position(10, 20);
-                    text.set_height(16);
-                    text.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
-                    text.set_color(0x37, 0x3a, 0x41);  // белый текст
+            ui.add::<Rect>(|r| {
+                r.set_rect(0, 0, 390, h);
+                r.set_color(0x27, 0x2a, 0x31);
+
+                r.add::<Rect>(|r|{
+                    r.set_rect(10,10, 200, 22);
+                    r.set_color(0x87, 0x2a, 0x31);
+                    r.add::<Text>(|t| {                
+                        t.set_content("Медиа:");
+                        t.set_position(1, 1);
+                        t.set_height(20);
+                        t.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
+                        t.set_color(0x37, 0x3a, 0x41);  // белый текст
+                    });
+                });
+
+                r.add::<Rect>(|r|{
+                    r.set_rect(10,36, 370, 20);
+                    r.set_color(0x87, 0x2a, 0x31);
+                    r.add::<Text>(|t| {                
+                        t.set_content("[d]Mamay");
+                        t.set_position(1, 2);
+                        t.set_height(16);
+                        t.set_text_color(0xff, 0xff, 0xff);       
+                        t.set_color(0x37, 0x3a, 0x41);  
+                    });
+                    r.add::<Text>(|t| {
+                        t.set_content("[r]MyVideo");
+                        t.set_position(80, 2);
+                        t.set_height(16);
+                        t.set_text_color(0xef, 0xef, 0xef);
+                        t.set_color(0x37, 0x3a, 0x41);  
+                    });
                 });
             })
-            .add::<Rect>(|rect| {
-                rect.set_rect(w - 300, 0, 300, h, );
-                rect.set_color(0x27, 0x2a, 0x31);
-            })
-            // .add::<Text>(|text| {                
-            //     text.set_content("[d]Mamay");
-            //     text.set_position(10, 20);
-            //     text.set_height(16);
-            //     text.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
-            //     text.set_color(0x37, 0x3a, 0x41);  // белый текст
-            // })
-            ;
+            .add::<Rect>(|r| {
+                r.set_rect(w - 300, 0, 300, h, );
+                r.set_color(0x27, 0x2a, 0x31);
+            });
         })
         .run();
 }
