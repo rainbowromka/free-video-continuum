@@ -11,9 +11,10 @@ fn main() {
         .with_title("Free Video Continuum")
         .set_client_color(0x17, 0x1a, 0x21)                
         .on_draw(|ui: &mut Ui| {
-
+            
             let w = ui.client_width();
             let h = ui.client_height();
+            println!("w={}, h={}", w, h);
 
             ui.add::<Rect>(|rect| {
                 rect.set_rect(0, 0, 390, h);

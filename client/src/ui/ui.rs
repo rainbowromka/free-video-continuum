@@ -1,3 +1,4 @@
+use crate::ui::elements;
 use crate::ui::elements::common::{AddElement, Widget};
 use crate::ui::render::renderer::Renderer;
 
@@ -26,9 +27,11 @@ impl Ui {
 
         for rect in &mut self.elements {
             rect.mark_quad_dirty();
+            rect.mark_content_dirty();  // ← добавить
         }
         for rect in &mut self.new_elements {
             rect.mark_quad_dirty();
+            rect.mark_content_dirty();  // ← добавить
         }
     }
 
@@ -52,8 +55,7 @@ impl Ui {
                     old.update_from(new_element.as_ref());
                 } else {                
                     *old = new_element;
-                }
-
+                }                
             } else {
                 // Новый Rect — добавляем
                 self.elements.push(new_element);
@@ -64,12 +66,29 @@ impl Ui {
         self.elements.truncate(new_count);
 
         // Рендерим
-        for element in &mut self.elements {
-            element.create_textures();            
-            element.put_textures(self.client_width,self.client_height);
-        }
+        self.draw();
 
         self.new_elements.clear();
+    }
+
+    pub fn draw(&mut self) {
+        // Сначала подготовили текстуры
+        for element in &mut self.elements {
+            println!("client: {}x{}", self.client_width, self.client_height);
+            element.create_textures();
+        }
+
+        let bg = self.bg_color();
+        unsafe {
+            gl::Viewport(0, 0, self.client_width as i32, self.client_height as i32);
+            gl::ClearColor(bg.0, bg.1, bg.2, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+
+        // Потом отрисовали
+        for element in &mut self.elements {
+            element.draw(self.client_width, self.client_height);
+        }
     }
 
     pub fn set_client_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
@@ -80,6 +99,7 @@ impl Ui {
     pub fn bg_color(&self) -> (f32, f32, f32) {
         self.bg_color
     }
+
 }
 
 fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {

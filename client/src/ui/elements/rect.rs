@@ -1,4 +1,4 @@
-use crate::ui::{elements::{base::BaseElement, common::{AddElement, Widget}}};
+use crate::ui::elements::{self, base::BaseElement, common::{AddElement, Widget}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
@@ -33,22 +33,58 @@ impl Widget for Rect {
         &self.base
     }    
     
+    // fn update_from(&mut self, other: &dyn Widget) {
+    //     if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
+    //         self.base.update_from(&other_rect.base);
+    //     }    
+    // }        
+
     fn update_from(&mut self, other: &dyn Widget) {
         if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
             self.base.update_from(&other_rect.base);
-        }    
-    }            
+            
+            // Если размер Rect изменился — дети должны перерисоваться
+            if self.base.width != other_rect.base.width || 
+            self.base.height != other_rect.base.height {
+                for child in &mut self.children {
+                    child.mark_quad_dirty();
+                }
+            }
+        }
+    }    
     
     fn mark_quad_dirty(&mut self) {
         self.base.mark_quad_dirty();
     }      
 
-    fn create_textures(&mut self) {
+    fn mark_content_dirty(&mut self) {
+        self.base.mark_content_dirty();
+    }      
+
+    fn create_textures(&mut self) -> bool {
+        let mut result = false;
+        
+        for element in &mut self.children {
+            if element.create_textures() {
+                result = true;
+            }
+        }
+
+        if result {
+            self.base.mark_quad_dirty();
+            self.base.mark_content_dirty();
+        }
+
+        // Рисуем свой FBO
         self.base.lazy_init();
 
-        // Если содержимое dirty — перерисовываем в FBO
+        println!("Rect create_textures: content_dirty={}, size={}x{}", 
+            self.base.content_dirty, 
+            self.base.width, 
+            self.base.height
+        );
+
         if self.base.content_dirty {
-            // Bind Rect FBO
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
                 gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
@@ -61,51 +97,63 @@ impl Widget for Rect {
                     1.0,
                 );
                 gl::Clear(gl::COLOR_BUFFER_BIT);
-            }
 
-            // Для каждого ребёнка:
-            for child in &mut self.children {
-                // 1. Ребёнок создаёт свою текстуру
-                child.create_textures();
-
-                // 2. Ребёнок кладёт свою текстуру в FBO Rect'а
-                unsafe {
-                    gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
+                // Дети поверх
+                for element in &mut self.children {
                     gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
+                    element.draw(self.base.width, self.base.height);
                 }
-                child.put_textures(self.base.width, self.base.height);
-            }
 
-            unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             }
 
             self.base.content_dirty = false;
+
+            result = true;
         }
+
+        result
     }
 
-    fn put_textures(&self, parent_w: u32, parent_h: u32) {
-        // Рисуем готовую текстуру Rect'а в родителя
+    fn draw(&mut self, parent_w: u32, parent_h: u32) {
+        println!("Rect draw: x={}, y={}, w={}, h={}, parent={}x{}",
+            self.base.x, self.base.y, self.base.width, self.base.height, parent_w, parent_h);
+
+        if self.base.quad_dirty {
+            let vertices = self.base.update_quad_vertices(parent_w, parent_h);
+
+            unsafe {
+                gl::BindVertexArray(self.base.quad_vao.unwrap());
+                gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+                    vertices.as_ptr() as *const gl::types::GLvoid,
+                    gl::STATIC_DRAW,
+                );
+            }
+
+            self.base.quad_dirty = false;
+        }
+
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, self.base.texture.unwrap());
             gl::UseProgram(*TEXTURE_PROGRAM);
-
-            // Обновляем quad с позицией в родителе
-            let vertices = self.base.update_quad_vertices(parent_w, parent_h);
-
             gl::BindVertexArray(self.base.quad_vao.unwrap());
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
-                vertices.as_ptr() as *const gl::types::GLvoid,
-                gl::STATIC_DRAW,
-            );
-
             gl::DrawArrays(gl::TRIANGLES, 0, 6);
             gl::BindVertexArray(0);
         }
+    }
+
+    fn is_content_dirty(&self) -> bool
+    {
+        self.base.content_dirty
+    }
+
+    fn is_quad_dirty(&self) -> bool
+    {
+        self.base.quad_dirty
     }
 }
 

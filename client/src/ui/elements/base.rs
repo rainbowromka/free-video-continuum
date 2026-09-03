@@ -54,7 +54,11 @@ impl BaseElement {
         self.quad_dirty = true;
     }
 
-    fn recreate_fbo(&mut self) {
+    pub fn mark_content_dirty(&mut self) {
+        self.content_dirty = true;
+    }
+
+    pub fn recreate_fbo(&mut self) {
         if let Some(fbo) = self.fbo {
             unsafe {
                 gl::DeleteFramebuffers(1, &fbo);
@@ -152,14 +156,24 @@ impl BaseElement {
         let bottom = 1.0 - ((y + height) / h) * 2.0;
 
         // x, y, u, v
+        // [
+        //     left, top, 0.0, 0.0,       // верхний левый
+        //     left, bottom, 0.0, 1.0,    // нижний левый
+        //     right, bottom, 1.0, 1.0,   // нижний правый
+        //     left, top, 0.0, 0.0,       // верхний левый
+        //     right, bottom, 1.0, 1.0,   // нижний правый
+        //     right, top, 1.0, 0.0,      // верхний правый
+        // ]
+
         [
-            left, top, 0.0, 0.0,       // верхний левый
-            left, bottom, 0.0, 1.0,    // нижний левый
-            right, bottom, 1.0, 1.0,   // нижний правый
-            left, top, 0.0, 0.0,       // верхний левый
-            right, bottom, 1.0, 1.0,   // нижний правый
-            right, top, 1.0, 0.0,      // верхний правый
+            left, top, 0.0, 1.0,      // V=1
+            left, bottom, 0.0, 0.0,   // V=0
+            right, bottom, 1.0, 0.0,  // V=0
+            left, top, 0.0, 1.0,      // V=1
+            right, bottom, 1.0, 0.0,  // V=0
+            right, top, 1.0, 1.0,     // V=1
         ]
+
     }
 
     pub fn update_from(&mut self, new: &BaseElement) {

@@ -46,13 +46,12 @@ impl Text {
             let (width, _) = FONT_MANAGER.measure_text(&self.content, height as f32);
             self.base.width = width;
             
-            // self.base.recreate_fbo();
-            // self.base.content_dirty = true;
-            // self.base.quad_dirty = true;
+            self.base.recreate_fbo();
+            self.base.content_dirty = true;
+            self.base.quad_dirty = true;
         }
         self
     }
-
 }
 
 impl Text {
@@ -131,15 +130,14 @@ impl Text {
             // Рисуем quad на весь FBO
             gl::BindVertexArray(self.base.quad_vao.unwrap());
 
-
             let vertices: [f32; 24] = [
-                -1.0, 1.0, 0.0, 1.0,    // верхний левый → V=1
-                -1.0, -1.0, 0.0, 0.0,   // нижний левый → V=0
-                1.0, -1.0, 1.0, 0.0,    // нижний правый → V=0
-                -1.0, 1.0, 0.0, 1.0,    // верхний левый → V=1
-                1.0, -1.0, 1.0, 0.0,    // нижний правый → V=0
-                1.0, 1.0, 1.0, 1.0,     // верхний правый → V=1
-            ];
+                -1.0, 1.0, 0.0, 0.0,    // верхний левый → V=0
+                -1.0, -1.0, 0.0, 1.0,   // нижний левый → V=1
+                1.0, -1.0, 1.0, 1.0,    // нижний правый → V=1
+                -1.0, 1.0, 0.0, 0.0,    // верхний левый → V=0
+                1.0, -1.0, 1.0, 1.0,    // нижний правый → V=1
+                1.0, 1.0, 1.0, 0.0,     // верхний правый → V=0
+            ];            
 
             gl::BindVertexArray(self.base.quad_vao.unwrap());
             gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
@@ -181,13 +179,69 @@ impl Widget for Text {
     
     fn mark_quad_dirty(&mut self) {
         self.base.mark_quad_dirty();
-    }
+    }      
 
-    fn create_textures(&mut self) {
+    fn mark_content_dirty(&mut self) {
+        self.base.mark_content_dirty();
+    }      
+
+    // fn create_textures(&mut self) {
+    //     self.base.lazy_init();
+
+    //     if self.base.content_dirty {
+    //         // Bind Text FBO
+    //         unsafe {
+    //             gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
+    //             gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
+
+    //             // Фон
+    //             gl::ClearColor(
+    //                 self.base.color().0,
+    //                 self.base.color().1,
+    //                 self.base.color().2,
+    //                 1.0,
+    //             );
+    //             gl::Clear(gl::COLOR_BUFFER_BIT);
+
+    //             // Растеризация и отрисовка текста
+    //             self.render_text();
+
+    //             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+    //         }
+
+    //         self.base.content_dirty = false;
+    //     }
+    // }
+
+    // fn put_textures(&self, parent_w: u32, parent_h: u32) {
+    //     // Рисуем готовую текстуру Text'а в родителя
+    //     unsafe {
+    //         gl::ActiveTexture(gl::TEXTURE0);
+    //         gl::BindTexture(gl::TEXTURE_2D, self.base.texture.unwrap());
+    //         gl::UseProgram(*TEXTURE_PROGRAM);
+
+    //         // Обновляем quad с позицией в родителе
+    //         let vertices = self.base.update_quad_vertices(parent_w, parent_h);
+
+    //         gl::BindVertexArray(self.base.quad_vao.unwrap());
+    //         gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
+    //         gl::BufferData(
+    //             gl::ARRAY_BUFFER,
+    //             (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+    //             vertices.as_ptr() as *const gl::types::GLvoid,
+    //             gl::STATIC_DRAW,
+    //         );
+
+    //         gl::DrawArrays(gl::TRIANGLES, 0, 6);
+    //         gl::BindVertexArray(0);
+    //     }
+    // }
+
+    fn create_textures(&mut self) -> bool {
         self.base.lazy_init();
 
         if self.base.content_dirty {
-            // Bind Text FBO
+            // Рисуем в свой FBO
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
                 gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
@@ -201,38 +255,57 @@ impl Widget for Text {
                 );
                 gl::Clear(gl::COLOR_BUFFER_BIT);
 
-                // Растеризация и отрисовка текста
+                // Буквы
                 self.render_text();
 
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             }
 
             self.base.content_dirty = false;
+            true
+        } else {
+            false
         }
     }
 
-    fn put_textures(&self, parent_w: u32, parent_h: u32) {
-        // Рисуем готовую текстуру Text'а в родителя
+    fn draw(&mut self, parent_w: u32, parent_h: u32) {
+        // Если позиция изменилась — обновить quad
+        if self.base.quad_dirty {
+            let vertices = self.base.update_quad_vertices(parent_w, parent_h);
+
+            unsafe {
+                gl::BindVertexArray(self.base.quad_vao.unwrap());
+                gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+                    vertices.as_ptr() as *const gl::types::GLvoid,
+                    gl::STATIC_DRAW,
+                );
+            }
+
+            self.base.quad_dirty = false;
+        }
+
+        // Нарисовать свою текстуру в текущий FBO родителя
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             gl::BindTexture(gl::TEXTURE_2D, self.base.texture.unwrap());
             gl::UseProgram(*TEXTURE_PROGRAM);
-
-            // Обновляем quad с позицией в родителе
-            let vertices = self.base.update_quad_vertices(parent_w, parent_h);
-
             gl::BindVertexArray(self.base.quad_vao.unwrap());
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.base.quad_vbo.unwrap());
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
-                vertices.as_ptr() as *const gl::types::GLvoid,
-                gl::STATIC_DRAW,
-            );
-
             gl::DrawArrays(gl::TRIANGLES, 0, 6);
             gl::BindVertexArray(0);
         }
+    }
+
+    fn is_content_dirty(&self) -> bool
+    {
+        self.base.content_dirty
+    }
+
+    fn is_quad_dirty(&self) -> bool
+    {
+        self.base.quad_dirty
     }
 }
 
