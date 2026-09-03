@@ -1,11 +1,12 @@
+use crate::ui::render::shader::TEXTURE_PROGRAM;
+
 pub struct BaseElement {
     pub x: u32,
     pub y: u32,
     pub width: u32,
     pub height: u32,
     color: (f32, f32, f32),
-    pub content_dirty: bool,
-    pub quad_dirty: bool,
+    pub dirty: bool,
 
     pub fbo: Option<gl::types::GLuint>,
     pub texture: Option<gl::types::GLuint>,
@@ -21,8 +22,7 @@ impl BaseElement {
             width,
             height,
             color: (0.2, 0.6, 1.0),
-            content_dirty: true,
-            quad_dirty: true,
+            dirty: true,            
             fbo: None,
             texture: None,
             quad_vao: None,
@@ -34,7 +34,7 @@ impl BaseElement {
         if self.x != x || self.y != y {
             self.x = x;
             self.y = y;
-            self.quad_dirty = true;
+            self.dirty = true;
         }
     }
 
@@ -42,17 +42,17 @@ impl BaseElement {
         if self.width != width || self.height != height {
             self.width = width;
             self.height = height;
-            self.recreate_fbo();
-            self.content_dirty = true;
-            self.quad_dirty = true;
+            // self.recreate_fbo();
+            // self.content_dirty = true;
+            // self.quad_dirty = true;
         }
     }
-    
-    pub fn mark_quad_dirty(&mut self) {
-        self.quad_dirty = true;
+
+    pub fn mark_dirty(&mut self) {
+        self.dirty = true;
     }
 
-    fn recreate_fbo(&mut self) {
+    pub fn recreate_fbo(&mut self) {
         if let Some(fbo) = self.fbo {
             unsafe {
                 gl::DeleteFramebuffers(1, &fbo);
@@ -64,10 +64,10 @@ impl BaseElement {
             }
         }
 
-    self.init_fbo();
+        self.init_fbo();
     }
 
-        fn init_fbo(&mut self) {
+    fn init_fbo(&mut self) {
         let mut fbo = 0;
         let mut texture = 0;
 
@@ -118,7 +118,7 @@ impl BaseElement {
         self.texture = Some(texture);
     }
 
-        fn redraw_position(&mut self, window_width: u32, window_height: u32) {
+    pub fn redraw_position(&mut self, window_width: u32, window_height: u32) {
         let vertices = self.update_quad_vertices(window_width, window_height);
 
         unsafe {
@@ -132,10 +132,10 @@ impl BaseElement {
             );
         }
 
-        self.quad_dirty = false;
+        self.dirty = false;
     }
 
-    fn update_quad_vertices(&self, window_width: u32, window_height: u32) -> [f32; 24] {
+    pub fn update_quad_vertices(&self, window_width: u32, window_height: u32) -> [f32; 24] {
         let w = window_width as f32;
         let h = window_height as f32;
         let x = self.x as f32;
@@ -150,14 +150,24 @@ impl BaseElement {
         let bottom = 1.0 - ((y + height) / h) * 2.0;
 
         // x, y, u, v
+        // [
+        //     left, top, 0.0, 0.0,       // верхний левый
+        //     left, bottom, 0.0, 1.0,    // нижний левый
+        //     right, bottom, 1.0, 1.0,   // нижний правый
+        //     left, top, 0.0, 0.0,       // верхний левый
+        //     right, bottom, 1.0, 1.0,   // нижний правый
+        //     right, top, 1.0, 0.0,      // верхний правый
+        // ]
+
         [
-            left, top, 0.0, 0.0,       // верхний левый
-            left, bottom, 0.0, 1.0,    // нижний левый
-            right, bottom, 1.0, 1.0,   // нижний правый
-            left, top, 0.0, 0.0,       // верхний левый
-            right, bottom, 1.0, 1.0,   // нижний правый
-            right, top, 1.0, 0.0,      // верхний правый
+            left, top, 0.0, 1.0,      // V=1
+            left, bottom, 0.0, 0.0,   // V=0
+            right, bottom, 1.0, 0.0,  // V=0
+            left, top, 0.0, 1.0,      // V=1
+            right, bottom, 1.0, 0.0,  // V=0
+            right, top, 1.0, 1.0,     // V=1
         ]
+
     }
 
     pub fn update_from(&mut self, new: &BaseElement) {
@@ -165,43 +175,39 @@ impl BaseElement {
         if self.x != new.x || self.y != new.y {
             self.x = new.x;
             self.y = new.y;
-            self.quad_dirty = true;
+            self.dirty = true;
         }
 
         // Размер изменился
         if self.width != new.width || self.height != new.height {
             self.width = new.width;
             self.height = new.height;
-            self.recreate_fbo();
-            self.content_dirty = true;
-            self.quad_dirty = true;
+            self.recreate_fbo();  // ← пересоздать FBO с новым размером
+            self.dirty = true;
         }
 
         // Цвет изменился
         if self.color != new.color {
             self.color = new.color;
-            self.content_dirty = true;
+            self.dirty = true;
         }
     }
 
-    pub fn draw(&mut self, texture_program: gl::types::GLuint, window_width: u32, window_height: u32) {
-        // Ленивая инициализация
-        self.lazy_init();
+    // pub fn draw(&mut self, window_width: u32, window_height: u32) {
+    //     // Ленивая инициализация
+    //     self.lazy_init();
 
-        // Полная перерисовка (содержимое + позиция)
-        if self.content_dirty {
-            self.full_redraw(window_width, window_height);
-        }
-        // Только позиция
-        else if self.quad_dirty {
-            self.redraw_position(window_width, window_height);
-        }
+    //     // Полная перерисовка (содержимое + позиция)
+    //     if self.dirty {
+    //         self.full_redraw(window_width, window_height);        
+    //         self.redraw_position(window_width, window_height);
+    //     }
 
-        // Всегда отображаем готовую текстуру
-        self.redraw(texture_program);
-    }
+    //     // Всегда отображаем готовую текстуру
+    //     self.redraw(*TEXTURE_PROGRAM);
+    // }
 
-    fn lazy_init(&mut self) {
+    pub fn lazy_init(&mut self) {
         if self.fbo.is_none() {
             self.init_fbo();
         }
@@ -210,49 +216,49 @@ impl BaseElement {
         }
     }
 
-    fn full_redraw(&mut self, window_width: u32, window_height: u32) {
-        // Перерисовать содержимое в FBO
-        self.render_to_fbo();
+    // fn full_redraw(&mut self, window_width: u32, window_height: u32) {
+    //     // Перерисовать содержимое в FBO
+    //     self.render_to_fbo();
 
-        // Восстановить viewport
-        unsafe {
-            gl::Viewport(0, 0, window_width as i32, window_height as i32);
-        }
+    //     // Восстановить viewport
+    //     unsafe {
+    //         gl::Viewport(0, 0, window_width as i32, window_height as i32);
+    //     }
 
-        // Обновить позицию на экране
-        self.redraw_position(window_width, window_height);
+    //     // Обновить позицию на экране
+    //     self.redraw_position(window_width, window_height);
 
-        self.content_dirty = false;
-    }
+    //     self.dirty = false;
+    // }
 
-    fn redraw(&self, texture_program: gl::types::GLuint) {
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, self.texture.unwrap());
+    // pub fn redraw(&self, texture_program: gl::types::GLuint) {
+    //     unsafe {
+    //         gl::ActiveTexture(gl::TEXTURE0);
+    //         gl::BindTexture(gl::TEXTURE_2D, self.texture.unwrap());
 
-            gl::UseProgram(texture_program);
-            gl::BindVertexArray(self.quad_vao.unwrap());
-            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+    //         gl::UseProgram(texture_program);
+    //         gl::BindVertexArray(self.quad_vao.unwrap());
+    //         gl::DrawArrays(gl::TRIANGLES, 0, 6);
 
-            gl::BindVertexArray(0);
-        }
-    }
+    //         gl::BindVertexArray(0);
+    //     }
+    // }
 
-    fn render_to_fbo(&self) {
-        unsafe {
-            // Рисуем в FBO вместо экрана
-            gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo.unwrap());
+    // fn render_to_fbo(&self) {
+    //     unsafe {
+    //         // Рисуем в FBO вместо экрана
+    //         gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo.unwrap());
 
-            gl::Viewport(0, 0, self.width as i32, self.height as i32);
+    //         gl::Viewport(0, 0, self.width as i32, self.height as i32);
 
-            // Очищаем цветом Rect
-            gl::ClearColor(self.color.0, self.color.1, self.color.2, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+    //         // Очищаем цветом Rect
+    //         gl::ClearColor(self.color.0, self.color.1, self.color.2, 1.0);
+    //         gl::Clear(gl::COLOR_BUFFER_BIT);
 
-            // Возвращаемся к обычному экрану
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        }
-    }
+    //         // Возвращаемся к обычному экрану
+    //         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+    //     }
+    // }
 
     fn init_quad_buffers(&mut self) {
         let mut quad_vao = 0;
@@ -302,7 +308,7 @@ impl BaseElement {
         );
         if self.color != new_color {
             self.color = new_color;
-            self.content_dirty = true;
+            self.dirty = true;
         }
     }
 

@@ -1,7 +1,5 @@
-use crate::ui::elements::rect::Rect;
-use crate::ui::elements::widget::Widget;
-use crate::ui::renderer::Renderer;
-use crate::ui::elements::text::Text;
+use crate::ui::elements::common::{AddElement, Widget};
+
 
 pub struct Ui {
     elements: Vec<Box<dyn Widget>>,
@@ -21,16 +19,21 @@ impl Ui {
             bg_color: hex_to_rgb(0x16, 0x19, 0x20),
         }
     }
+    
+    pub fn update_size(&mut self, w: u32, h: u32) {
+        self.client_width = w;
+        self.client_height = h;
+    }
 
-    pub fn resize(&mut self, client_width: u32, client_height: u32) {
-        self.client_width = client_width;
-        self.client_height = client_height;
+    pub fn resize(&mut self, w: u32, h: u32) {
+        self.update_size(w, h);
 
-        for rect in &mut self.elements {
-            rect.mark_quad_dirty();
+        // Помечаем всё рекурсивно dirty
+        for element in &mut self.elements {
+            element.mark_dirty_recursive();
         }
-        for rect in &mut self.new_elements {
-            rect.mark_quad_dirty();
+        for element in &mut self.new_elements {
+            element.mark_dirty_recursive();
         }
     }
 
@@ -42,28 +45,7 @@ impl Ui {
         self.client_height
     }
 
-    pub fn add_rect<F>(&mut self, x: u32, y: u32, width: u32, height: u32, configure: F) -> &mut Self
-    where
-        F: FnOnce(&mut Rect),
-    {
-        let mut rect = Rect::new(x, y, width, height);
-        configure(&mut rect);
-        self.new_elements.push(Box::new(rect));        
-        self
-    }
-
-    pub fn add_text<F>(&mut self, text: &str, configure: F) -> &mut Self
-    where
-        F: FnOnce(&mut Text),
-    {
-        let mut t = Text::new(text);
-        configure(&mut t);        
-        self.new_elements.push(Box::new(t));
-        // TODO: добавить в коллекцию текстов
-        self
-    }
-
-    pub fn render(&mut self, renderer: &Renderer) {
+    pub fn render(&mut self) {
         let new_count = self.new_elements.len();
 
         // Проходим по новым Rect'ам
@@ -73,11 +55,9 @@ impl Ui {
 
                 if old.as_any().type_id() == new_element.as_any().type_id() {
                     old.update_from(new_element.as_ref());
-                } else {
-                
+                } else {                
                     *old = new_element;
-                }
-
+                }                
             } else {
                 // Новый Rect — добавляем
                 self.elements.push(new_element);
@@ -88,15 +68,28 @@ impl Ui {
         self.elements.truncate(new_count);
 
         // Рендерим
-        for rect in &mut self.elements {
-            rect.draw(
-                renderer.texture_program(),
-                self.client_width,
-                self.client_height,
-            );
-        }
+        self.draw();
 
         self.new_elements.clear();
+    }
+
+    pub fn draw(&mut self) {
+        // Сначала подготовили текстуры
+        for element in &mut self.elements {
+            element.create_textures();
+        }
+
+        let bg = self.bg_color();
+        unsafe {
+            gl::Viewport(0, 0, self.client_width as i32, self.client_height as i32);
+            gl::ClearColor(bg.0, bg.1, bg.2, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+
+        // Потом отрисовали
+        for element in &mut self.elements {
+            element.draw(self.client_width, self.client_height);
+        }
     }
 
     pub fn set_client_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
@@ -107,8 +100,21 @@ impl Ui {
     pub fn bg_color(&self) -> (f32, f32, f32) {
         self.bg_color
     }
+
 }
 
 fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
+}
+
+impl AddElement for Ui {
+    fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
+    where
+        T: Widget + Default + 'static,
+    {
+        let mut element = T::default();
+        configure(&mut element);
+        self.new_elements.push(Box::new(element));
+        self
+    }
 }
