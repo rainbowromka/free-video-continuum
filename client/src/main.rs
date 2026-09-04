@@ -40,28 +40,27 @@ fn main() {
                         .set_color(0x37, 0x3a, 0x41)
                     });
                 })
-                // .add<HBoxText>(|h|{});
-                // .add::<HBox>(|h|{h
-                //     .set_rect(10,36, 370, 20)
-                //     .set_color(0x87, 0x2a, 0x31)
-                //     .add::<Text>(|t| {t
-                //         .set_content("[d]Mamay")
-                //         .set_height(16)
-                //         .set_text_color(0xff, 0xff, 0xff)
-                //         .set_color(0x37, 0x3a, 0x41)
-                //     })
-                //     .add::<Text>(|t| { t
-                //         .set_content("[r]MyVideo")
-                //         .set_height(16)
-                //         .set_text_color(0xef, 0xef, 0xef)
-                //         .set_color(0x37, 0x3a, 0x41)
-                //     })
-                //     .add::<Text>(|t| { t
-                //         .set_content("[e]Новый год")
-                //         .set_height(16)
-                //         .set_text_color(0xef, 0xef, 0xef)
-                //         .set_color(0x37, 0x3a, 0x41)
-                //     });
+                .add::<HBox>(|h|{h
+                    .set_rect(10,36, 370, 20)
+                    .set_color(0x87, 0x2a, 0x31)
+                    .add::<Text>(|t| {t
+                        .set_content("[d]Mamay")
+                        .set_height(16)
+                        .set_text_color(0xff, 0xff, 0xff)
+                        .set_color(0x37, 0x3a, 0x41)
+                    })
+                    .add::<Text>(|t| { t
+                        .set_content("[r]MyVideo")
+                        .set_height(16)
+                        .set_text_color(0xef, 0xef, 0xef)
+                        .set_color(0x37, 0x3a, 0x41)
+                    })
+                    .add::<Text>(|t| { t
+                        .set_content("[e]Новый год")
+                        .set_height(16)
+                        .set_text_color(0xef, 0xef, 0xef)
+                        .set_color(0x37, 0x3a, 0x41)
+                    });
                 });
             })
             .add::<Rect>(|r| {
