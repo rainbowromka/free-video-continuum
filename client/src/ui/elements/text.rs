@@ -32,11 +32,6 @@ impl Text {
         self
     }
 
-    pub fn set_bg_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
-        self.base.set_color(r, g, b);
-        self
-    }
-
     pub fn set_height(&mut self, height: u32) -> &mut Self {
         if self.base.height != height {
             self.base.height = height;
@@ -55,24 +50,9 @@ impl Text {
         self
     }
 
-    fn render_to_fbo(&self) {
-        unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
-            gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
-
-            // Фон
-            gl::ClearColor(
-                self.base.color().0,
-                self.base.color().1,
-                self.base.color().2,
-                1.0,
-            );
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-
-            self.render_text();
-
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        }
+    pub fn set_position(&mut self, x: u32, y: u32) -> &mut Self{
+        self.base.set_position(x, y);
+        self
     }
 
     fn render_text(&self) {
@@ -162,7 +142,11 @@ impl Widget for Text {
     fn base(&self) -> &BaseElement {
         &self.base
     }
-    
+
+    fn set_position(&mut self, x: u32, y: u32) {
+        self.base.set_position(x, y);
+    }
+
     fn update_from(&mut self, other: &dyn Widget) {
         if let Some(other_text) = other.as_any().downcast_ref::<Text>() {
             self.base.update_from(&other_text.base);
@@ -173,10 +157,6 @@ impl Widget for Text {
             }
         }
     }
-    
-    fn mark_dirty(&mut self) {
-        self.base.mark_dirty();
-    }      
 
     fn create_textures(&mut self) -> bool {
         self.base.lazy_init();
@@ -238,13 +218,11 @@ impl Widget for Text {
         }
     }
 
-    fn is_dirty(&self) -> bool
-    {
-        self.base.dirty
-    }
-
     fn mark_dirty_recursive(&mut self) {
         self.base.mark_dirty();
+    }
+
+    fn layout(&mut self) {        
     }
 }
 

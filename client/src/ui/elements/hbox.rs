@@ -1,13 +1,14 @@
-use crate::ui::elements::{base::BaseElement, common::{AddElement, Widget}};
-use std::{any::Any, ops::{Deref, DerefMut}};
+use crate::ui::elements::base::BaseElement;
+use crate::ui::elements::common::{AddElement, Widget};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
+use std::ops::{Deref, DerefMut};
 
-pub struct Rect {
+pub struct HBox {
     pub base: BaseElement,
     children: Vec<Box<dyn Widget>>,
 }
 
-impl Rect {
+impl HBox {
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             base: BaseElement::new(x, y, width, height),
@@ -21,7 +22,7 @@ impl Rect {
         self.base.width = width;
         self.base.height = height;
         self
-    }    
+    }
 
     pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
         self.base.set_color(r, g, b);
@@ -29,28 +30,22 @@ impl Rect {
     }
 }
 
-impl Widget for Rect {    
-    fn as_any(&self) -> &dyn Any {
+impl Widget for HBox {
+    fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-    
-    fn base(&self) -> &BaseElement {
+
+    fn base(&self) -> &BaseElement {    
         &self.base
     }
 
     fn set_position(&mut self, x: u32, y: u32) {
         self.base.set_position(x, y);
     }
-
-    fn update_from(&mut self, other: &dyn Widget) {
-        if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
-            self.base.update_from(&other_rect.base);
-        }
-    }    
     
-    fn create_textures(&mut self) -> bool {
+    fn create_textures(&mut self) -> bool {    
         let mut dirty = false;
-        
+
         for element in &mut self.children {
             if element.create_textures() {
                 dirty = true;
@@ -122,14 +117,26 @@ impl Widget for Rect {
         self.base.mark_dirty();
         for child in &mut self.children {
             child.mark_dirty_recursive();
+        }        
+    }
+
+    fn update_from(&mut self, other: &dyn Widget) {
+        if let Some(other_rect) = other.as_any().downcast_ref::<Self>() {
+            self.base.update_from(&other_rect.base);
         }
     }
 
-    fn layout(&mut self) {        
+    fn layout(&mut self) {
+        let mut x = 0;
+        for child in &mut self.children {
+            let y = (self.base.height - child.base().height) / 2;
+            child.set_position(x, y);
+            x += child.base().width;
+        }        
     }
 }
 
-impl Deref for Rect {
+impl Deref for HBox {
     type Target = BaseElement;
 
     fn deref(&self) -> &BaseElement {
@@ -137,19 +144,19 @@ impl Deref for Rect {
     }
 }
 
-impl DerefMut for Rect {
+impl DerefMut for HBox {
     fn deref_mut(&mut self) -> &mut BaseElement {
         &mut self.base
     }
 }
 
-impl Default for Rect {
+impl Default for HBox {
     fn default() -> Self {
-        Rect::new(0, 0, 0, 0)
+        Self::new(0, 0, 0, 0)
     }
 }
 
-impl AddElement for Rect {
+impl AddElement for HBox {
     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
     where
         T: Widget + Default + 'static,
