@@ -14,10 +14,6 @@ impl FontManager {
         Self { font }
     }
 
-    pub fn font(&self) -> &Font<'static> {
-        &self.font
-    }
-
     pub fn measure_text(&self, text: &str, size: f32) -> (u32, u32) {
         let scale = Scale::uniform(size);
         let v_metrics = self.font.v_metrics(scale);

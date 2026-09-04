@@ -2,7 +2,7 @@ mod ui;
 
 use ui::window::Window;
 
-use crate::ui::{elements::{rect::Rect, text::Text}, ui::Ui};
+use crate::ui::{elements::{hbox::HBox, rect::Rect, text::Text}, ui::Ui};
 use crate::ui::elements::common::AddElement;
 
 fn main() {
@@ -15,39 +15,53 @@ fn main() {
             let w = ui.client_width();
             let h = ui.client_height();
 
-            ui.add::<Rect>(|r| {
-                r.set_rect(0, 0, 390, h);
-                r.set_color(0x27, 0x2a, 0x31);
-
-                r.add::<Rect>(|r|{
-                    r.set_rect(10,10, 200, 22);
-                    r.set_color(0x87, 0x2a, 0x31);
-                    r.add::<Text>(|t| {                
-                        t.set_content("Медиа:");
-                        t.set_position(1, 1);
-                        t.set_height(20);
-                        t.set_text_color(0xff, 0xff, 0xff);       // чёрный фон
-                        t.set_color(0x37, 0x3a, 0x41);  // белый текст
+            ui.add::<Rect>(|r| { r
+                .set_rect(0, 0, 390, h)
+                .set_color(0x27, 0x2a, 0x31)
+                .add::<Rect>(|r|{ r
+                    .set_rect(10,10, 200, 22)
+                    .set_color(0x87, 0x2a, 0x31)
+                    .add::<Text>(|t| { t
+                        .set_content("Медиа:")
+                        .set_position(1, 1)
+                        .set_height(20)
+                        .set_text_color(0xff, 0xff, 0xff)
+                        .set_color(0x37, 0x3a, 0x41)
                     });
-                });
-
-                r.add::<Rect>(|r|{
-                    r.set_rect(10,36, 370, 20);
-                    r.set_color(0x87, 0x2a, 0x31);
-                    r.add::<Text>(|t| {                
-                        t.set_content("[d]Mamay");
-                        t.set_position(1, 2);
-                        t.set_height(16);
-                        t.set_text_color(0xff, 0xff, 0xff);       
-                        t.set_color(0x37, 0x3a, 0x41);  
+                })
+                .add::<Rect>(|r|{ r
+                    .set_rect(10,36, 370, 20)
+                    .set_color(0x87, 0x2a, 0x31)
+                    .add::<Text>(|t| { t
+                        .set_content("[d]Mamay")
+                        .set_position(1, 2)
+                        .set_height(16)
+                        .set_text_color(0xff, 0xff, 0xff)
+                        .set_color(0x37, 0x3a, 0x41)
                     });
-                    r.add::<Text>(|t| {
-                        t.set_content("[r]MyVideo");
-                        t.set_position(80, 2);
-                        t.set_height(16);
-                        t.set_text_color(0xef, 0xef, 0xef);
-                        t.set_color(0x37, 0x3a, 0x41);  
-                    });
+                })
+                // .add<HBoxText>(|h|{});
+                // .add::<HBox>(|h|{h
+                //     .set_rect(10,36, 370, 20)
+                //     .set_color(0x87, 0x2a, 0x31)
+                //     .add::<Text>(|t| {t
+                //         .set_content("[d]Mamay")
+                //         .set_height(16)
+                //         .set_text_color(0xff, 0xff, 0xff)
+                //         .set_color(0x37, 0x3a, 0x41)
+                //     })
+                //     .add::<Text>(|t| { t
+                //         .set_content("[r]MyVideo")
+                //         .set_height(16)
+                //         .set_text_color(0xef, 0xef, 0xef)
+                //         .set_color(0x37, 0x3a, 0x41)
+                //     })
+                //     .add::<Text>(|t| { t
+                //         .set_content("[e]Новый год")
+                //         .set_height(16)
+                //         .set_text_color(0xef, 0xef, 0xef)
+                //         .set_color(0x37, 0x3a, 0x41)
+                //     });
                 });
             })
             .add::<Rect>(|r| {

@@ -97,7 +97,3 @@ impl Window {
         });
     }
 }
-
-fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
-    (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
-}

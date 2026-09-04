@@ -1,5 +1,3 @@
-use crate::ui::render::shader::TEXTURE_PROGRAM;
-
 pub struct BaseElement {
     pub x: u32,
     pub y: u32,
@@ -35,16 +33,6 @@ impl BaseElement {
             self.x = x;
             self.y = y;
             self.dirty = true;
-        }
-    }
-
-    pub fn set_size(&mut self, width: u32, height: u32) {
-        if self.width != width || self.height != height {
-            self.width = width;
-            self.height = height;
-            // self.recreate_fbo();
-            // self.content_dirty = true;
-            // self.quad_dirty = true;
         }
     }
 
@@ -118,23 +106,6 @@ impl BaseElement {
         self.texture = Some(texture);
     }
 
-    pub fn redraw_position(&mut self, window_width: u32, window_height: u32) {
-        let vertices = self.update_quad_vertices(window_width, window_height);
-
-        unsafe {
-            gl::BindVertexArray(self.quad_vao.unwrap());
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.quad_vbo.unwrap());
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
-                vertices.as_ptr() as *const gl::types::GLvoid,
-                gl::STATIC_DRAW,
-            );
-        }
-
-        self.dirty = false;
-    }
-
     pub fn update_quad_vertices(&self, window_width: u32, window_height: u32) -> [f32; 24] {
         let w = window_width as f32;
         let h = window_height as f32;
@@ -148,16 +119,6 @@ impl BaseElement {
         let right = ((x + width) / w) * 2.0 - 1.0;
         let top = 1.0 - (y / h) * 2.0;
         let bottom = 1.0 - ((y + height) / h) * 2.0;
-
-        // x, y, u, v
-        // [
-        //     left, top, 0.0, 0.0,       // верхний левый
-        //     left, bottom, 0.0, 1.0,    // нижний левый
-        //     right, bottom, 1.0, 1.0,   // нижний правый
-        //     left, top, 0.0, 0.0,       // верхний левый
-        //     right, bottom, 1.0, 1.0,   // нижний правый
-        //     right, top, 1.0, 0.0,      // верхний правый
-        // ]
 
         [
             left, top, 0.0, 1.0,      // V=1
