@@ -2,26 +2,30 @@ use crate::ui::elements::{base::BaseElement, widget::Widget};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
-pub struct Rect {
+pub struct Button {
     pub base: BaseElement,
-    children: Vec<Box<dyn Widget>>,
+    child: Option<Box<dyn Widget>>,
+    min_width: u32,
+    min_height: u32,
 }
 
-impl Rect {
+impl Button {
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             base: BaseElement::new(x, y, width, height),
-            children: Vec::new(),
+            child: None,
+            min_width: width,
+            min_height: height,
         }
     }
 
     pub fn set_rect(&mut self, x: u32, y: u32, width: u32, height: u32) -> &mut Self {
         self.base.x = x;
         self.base.y = y;
-        self.base.width = width;
-        self.base.height = height;
+        self.min_width = width;
+        self.min_height = height;
         self
-    }    
+    }
 
     pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
         self.base.set_color(r, g, b);
@@ -29,7 +33,7 @@ impl Rect {
     }
 }
 
-impl Widget for Rect {    
+impl Widget for Button {    
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -43,7 +47,7 @@ impl Widget for Rect {
     }
 
     fn update_from(&mut self, other: &dyn Widget) {
-        if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
+        if let Some(other_rect) = other.as_any().downcast_ref::<Button>() {
             self.base.update_from(&other_rect.base);
         }
     }    
@@ -51,8 +55,8 @@ impl Widget for Rect {
     fn create_textures(&mut self) -> bool {
         let mut dirty = false;
         
-        for element in &mut self.children {
-            if element.create_textures() {
+        if let Some(child) = &mut self.child {
+            if child.create_textures() {
                 dirty = true;
             }
         }
@@ -77,11 +81,10 @@ impl Widget for Rect {
                 );
                 gl::Clear(gl::COLOR_BUFFER_BIT);
 
-                // Дети поверх
-                for element in &mut self.children {
+                if let Some(child) = &mut self.child {
                     gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
-                    element.draw(self.base.width, self.base.height);
-                }
+                    child.draw(self.base.width, self.base.height);
+                }               
 
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             }
@@ -120,20 +123,40 @@ impl Widget for Rect {
 
     fn mark_dirty_recursive(&mut self) {
         self.base.mark_dirty();
-        for child in &mut self.children {
+        if let Some(child) = &mut self.child {
             child.mark_dirty_recursive();
         }
     }
 
-    fn layout(&mut self) {        
+    fn layout(&mut self) {
+        // Расширяем под ребёнка
+        if let Some(child) = &mut self.child {
+            let child_w = child.base().width;
+            let child_h = child.base().height;
+
+            let new_width = self.min_width.max(child_w);
+            let new_height = self.min_height.max(child_h);
+
+            if self.base.width != new_width || self.base.height != new_height {
+                self.base.width = new_width;
+                self.base.height = new_height;
+                self.base.recreate_fbo();
+                self.base.mark_dirty();
+            }
+
+            // Центрируем ребёнка
+            let x = (self.base.width - child_w) / 2;
+            let y = (self.base.height - child_h) / 2;
+            child.set_position(x, y);
+        }
     }
 
     fn push_child(&mut self, child: Box<dyn Widget>) {
-        self.children.push(child);
+        self.child = Some(child);
     }
 }
 
-impl Deref for Rect {
+impl Deref for Button {
     type Target = BaseElement;
 
     fn deref(&self) -> &BaseElement {
@@ -141,28 +164,27 @@ impl Deref for Rect {
     }
 }
 
-impl DerefMut for Rect {
+impl DerefMut for Button {
     fn deref_mut(&mut self) -> &mut BaseElement {
         &mut self.base
     }
 }
 
-impl Default for Rect {
+impl Default for Button {
     fn default() -> Self {
-        Rect::new(0, 0, 0, 0)
+        Button::new(0, 0, 0, 0)
     }
 }
 
-// impl AddElement for Rect {
+// impl AddElement for Button {
 //     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
 //     where
 //         T: Widget + Default + 'static,
 //     {
 //         let mut element = T::default();
-//         element.prepare_default(self);
 //         configure(&mut element);
 //         element.layout();
-//         self.children.push(Box::new(element));
+//         self.child = Some(Box::new(element));
 //         self
 //     }
 // }

@@ -276,6 +276,13 @@ impl BaseElement {
     pub fn color(&self) -> (f32, f32, f32) {
         self.color
     }
+
+    pub fn set_color_raw(&mut self, r: f32, g: f32, b: f32) {
+        if self.color != (r, g, b) {
+            self.color = (r, g, b);
+            self.dirty = true;
+        }
+    }
 }
 
 impl Drop for BaseElement {

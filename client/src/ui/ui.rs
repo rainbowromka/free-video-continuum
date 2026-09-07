@@ -1,4 +1,4 @@
-use crate::ui::elements::common::{AddElement, Widget};
+use crate::ui::elements::widget::Widget;
 
 
 pub struct Ui {
@@ -101,14 +101,7 @@ impl Ui {
         self.bg_color
     }
 
-}
-
-fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
-    (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
-}
-
-impl AddElement for Ui {
-    fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
+    pub fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
     where
         T: Widget + Default + 'static,
     {
@@ -118,3 +111,19 @@ impl AddElement for Ui {
         self
     }
 }
+
+fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
+}
+
+// impl AddElement for Ui {
+//     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
+//     where
+//         T: Widget + Default + 'static,
+//     {
+//         let mut element = T::default();
+//         configure(&mut element);
+//         self.new_elements.push(Box::new(element));
+//         self
+//     }
+// }

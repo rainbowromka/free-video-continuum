@@ -2,8 +2,7 @@ mod ui;
 
 use ui::window::Window;
 
-use crate::ui::{elements::{hbox::HBox, rect::Rect, text::Text}, ui::Ui};
-use crate::ui::elements::common::AddElement;
+use crate::ui::{elements::{button::Button, hbox::HBox, rect::Rect, text::Text, widget::Widget}, ui::Ui};
 
 fn main() {
     Window::new()
@@ -20,46 +19,34 @@ fn main() {
                 .set_color(0x27, 0x2a, 0x31)
                 .add::<Rect>(|r|{ r
                     .set_rect(10,10, 200, 22)
-                    .set_color(0x87, 0x2a, 0x31)
                     .add::<Text>(|t| { t
                         .set_content("Медиа:")
                         .set_position(1, 1)
                         .set_height(20)
-                        .set_text_color(0xff, 0xff, 0xff)
-                        .set_color(0x37, 0x3a, 0x41)
-                    });
-                })
-                .add::<Rect>(|r|{ r
-                    .set_rect(10,36, 370, 20)
-                    .set_color(0x87, 0x2a, 0x31)
-                    .add::<Text>(|t| { t
-                        .set_content("[d]Mamay")
-                        .set_position(1, 2)
-                        .set_height(16)
-                        .set_text_color(0xff, 0xff, 0xff)
-                        .set_color(0x37, 0x3a, 0x41)
+                        .set_text_color(0xff, 0xff, 0xff);
                     });
                 })
                 .add::<HBox>(|h|{h
-                    .set_rect(10,36, 370, 20)
-                    .set_color(0x87, 0x2a, 0x31)
-                    .add::<Text>(|t| {t
-                        .set_content("[d]Mamay")
-                        .set_height(16)
-                        .set_text_color(0xff, 0xff, 0xff)
-                        .set_color(0x37, 0x3a, 0x41)
+                    .set_rect(10,36, 370, 22)
+                    .set_color(0x17, 0x1a, 0x21)
+                    .add::<Button>(|b|{b
+                        .add::<Text>(|t| {t
+                            .set_content("[d]Mamay")
+                            .set_height(16)
+                            .set_text_color(0xff, 0xff, 0xff);
+                        });
                     })
                     .add::<Text>(|t| { t
                         .set_content("[r]MyVideo")
                         .set_height(16)
                         .set_text_color(0xef, 0xef, 0xef)
-                        .set_color(0x37, 0x3a, 0x41)
+                        .set_color(0x17, 0x1a, 0x21)
                     })
                     .add::<Text>(|t| { t
                         .set_content("[e]Новый год")
                         .set_height(16)
                         .set_text_color(0xef, 0xef, 0xef)
-                        .set_color(0x37, 0x3a, 0x41)
+                        .set_color(0x17, 0x1a, 0x21)
                     });
                 });
             })

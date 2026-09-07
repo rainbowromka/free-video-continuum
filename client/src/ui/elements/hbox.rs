@@ -1,5 +1,5 @@
 use crate::ui::elements::base::BaseElement;
-use crate::ui::elements::common::{AddElement, Widget};
+use crate::ui::elements::widget::Widget;
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 use std::ops::{Deref, DerefMut};
 
@@ -35,8 +35,8 @@ impl Widget for HBox {
         self
     }
 
-    fn base(&self) -> &BaseElement {    
-        &self.base
+    fn base(&mut self) -> &mut BaseElement {    
+        &mut self.base
     }
 
     fn set_position(&mut self, x: u32, y: u32) {
@@ -134,6 +134,10 @@ impl Widget for HBox {
             x += child.base().width;
         }        
     }
+
+    fn push_child(&mut self, child: Box<dyn Widget>) {
+        self.children.push(child);
+    }
 }
 
 impl Deref for HBox {
@@ -156,15 +160,15 @@ impl Default for HBox {
     }
 }
 
-impl AddElement for HBox {
-    fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
-    where
-        T: Widget + Default + 'static,
-    {
-        let mut element = T::default();
-        configure(&mut element);
-        element.layout();
-        self.children.push(Box::new(element));
-        self
-    }
-}
+// impl AddElement for HBox {
+//     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
+//     where
+//         T: Widget + Default + 'static,
+//     {
+//         let mut element = T::default();
+//         configure(&mut element);
+//         element.layout();
+//         self.children.push(Box::new(element));
+//         self
+//     }
+// }

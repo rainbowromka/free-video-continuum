@@ -1,5 +1,5 @@
 use crate::ui::{
-    elements::{base::BaseElement, common::Widget},
+    elements::{base::BaseElement, widget::Widget},
     render::shader::{TEXTURE_PROGRAM,TEXT_PROGRAM}
 };
 use std::{any::Any, ops::{Deref, DerefMut}};
@@ -139,8 +139,8 @@ impl Widget for Text {
         self
     }
 
-    fn base(&self) -> &BaseElement {
-        &self.base
+    fn base(&mut self) -> &mut BaseElement {
+        &mut self.base
     }
 
     fn set_position(&mut self, x: u32, y: u32) {
@@ -223,6 +223,9 @@ impl Widget for Text {
     }
 
     fn layout(&mut self) {        
+    }
+    
+    fn push_child(&mut self, child: Box<dyn Widget>) {
     }
 }
 
