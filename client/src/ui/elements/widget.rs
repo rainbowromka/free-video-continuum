@@ -6,7 +6,7 @@ pub trait Widget {
     fn as_any(&self) -> &dyn Any;    
     fn base(&mut self) -> &mut BaseElement;
     fn set_position(&mut self, x: u32, y: u32);
-    fn update_from(&mut self, other: &dyn Widget);
+    fn diff(&mut self, other: &dyn Widget);
     fn mark_dirty_recursive(&mut self);
     fn create_textures(&mut self) -> bool;
     fn draw(&mut self, parent_w: u32, parent_h: u32);

@@ -46,9 +46,9 @@ impl Widget for Button {
         self.base.set_position(x, y);
     }
 
-    fn update_from(&mut self, other: &dyn Widget) {
+    fn diff(&mut self, other: &dyn Widget) {
         if let Some(other_rect) = other.as_any().downcast_ref::<Button>() {
-            self.base.update_from(&other_rect.base);
+            self.base.diff(&other_rect.base);
         }
     }    
     

@@ -147,9 +147,9 @@ impl Widget for Text {
         self.base.set_position(x, y);
     }
 
-    fn update_from(&mut self, other: &dyn Widget) {
+    fn diff(&mut self, other: &dyn Widget) {
         if let Some(other_text) = other.as_any().downcast_ref::<Text>() {
-            self.base.update_from(&other_text.base);
+            self.base.diff(&other_text.base);
             
             if self.content != other_text.content {
                 self.content = other_text.content.clone();

@@ -42,9 +42,9 @@ impl Widget for Rect {
         self.base.set_position(x, y);
     }
 
-    fn update_from(&mut self, other: &dyn Widget) {
+    fn diff(&mut self, other: &dyn Widget) {
         if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
-            self.base.update_from(&other_rect.base);
+            self.base.diff(&other_rect.base);
         }
     }    
     
@@ -152,17 +152,3 @@ impl Default for Rect {
         Rect::new(0, 0, 0, 0)
     }
 }
-
-// impl AddElement for Rect {
-//     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
-//     where
-//         T: Widget + Default + 'static,
-//     {
-//         let mut element = T::default();
-//         element.prepare_default(self);
-//         configure(&mut element);
-//         element.layout();
-//         self.children.push(Box::new(element));
-//         self
-//     }
-// }

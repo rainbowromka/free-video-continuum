@@ -3,6 +3,7 @@ use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
 use glutin::{Api, ContextBuilder, GlRequest};
+use crate::ui::elements::widget::Widget;
 
 pub struct Window {
     width: u32,
@@ -80,6 +81,9 @@ impl Window {
                         gl_context.resize(physical_size);
                         ui.resize(physical_size.width, physical_size.height);
                     }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        ui.handle_mouse_move(position.x as f32, position.y as f32);
+                    }
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     _ => (),
                 },
@@ -89,7 +93,7 @@ impl Window {
                     
                     on_draw(&mut ui);
 
-                    ui.render();
+                    ui.draw_all();
                     gl_context.swap_buffers().unwrap();
                 }
                 _ => (),

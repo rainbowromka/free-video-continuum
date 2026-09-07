@@ -3,7 +3,7 @@ pub struct BaseElement {
     pub y: u32,
     pub width: u32,
     pub height: u32,
-    color: (f32, f32, f32),
+    pub color: (f32, f32, f32),
     pub dirty: bool,
 
     pub fbo: Option<gl::types::GLuint>,
@@ -131,7 +131,7 @@ impl BaseElement {
 
     }
 
-    pub fn update_from(&mut self, new: &BaseElement) {
+    pub fn diff(&mut self, new: &BaseElement) {
         // Позиция изменилась
         if self.x != new.x || self.y != new.y {
             self.x = new.x;
@@ -154,20 +154,6 @@ impl BaseElement {
         }
     }
 
-    // pub fn draw(&mut self, window_width: u32, window_height: u32) {
-    //     // Ленивая инициализация
-    //     self.lazy_init();
-
-    //     // Полная перерисовка (содержимое + позиция)
-    //     if self.dirty {
-    //         self.full_redraw(window_width, window_height);        
-    //         self.redraw_position(window_width, window_height);
-    //     }
-
-    //     // Всегда отображаем готовую текстуру
-    //     self.redraw(*TEXTURE_PROGRAM);
-    // }
-
     pub fn lazy_init(&mut self) {
         if self.fbo.is_none() {
             self.init_fbo();
@@ -176,50 +162,6 @@ impl BaseElement {
             self.init_quad_buffers();
         }
     }
-
-    // fn full_redraw(&mut self, window_width: u32, window_height: u32) {
-    //     // Перерисовать содержимое в FBO
-    //     self.render_to_fbo();
-
-    //     // Восстановить viewport
-    //     unsafe {
-    //         gl::Viewport(0, 0, window_width as i32, window_height as i32);
-    //     }
-
-    //     // Обновить позицию на экране
-    //     self.redraw_position(window_width, window_height);
-
-    //     self.dirty = false;
-    // }
-
-    // pub fn redraw(&self, texture_program: gl::types::GLuint) {
-    //     unsafe {
-    //         gl::ActiveTexture(gl::TEXTURE0);
-    //         gl::BindTexture(gl::TEXTURE_2D, self.texture.unwrap());
-
-    //         gl::UseProgram(texture_program);
-    //         gl::BindVertexArray(self.quad_vao.unwrap());
-    //         gl::DrawArrays(gl::TRIANGLES, 0, 6);
-
-    //         gl::BindVertexArray(0);
-    //     }
-    // }
-
-    // fn render_to_fbo(&self) {
-    //     unsafe {
-    //         // Рисуем в FBO вместо экрана
-    //         gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo.unwrap());
-
-    //         gl::Viewport(0, 0, self.width as i32, self.height as i32);
-
-    //         // Очищаем цветом Rect
-    //         gl::ClearColor(self.color.0, self.color.1, self.color.2, 1.0);
-    //         gl::Clear(gl::COLOR_BUFFER_BIT);
-
-    //         // Возвращаемся к обычному экрану
-    //         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-    //     }
-    // }
 
     fn init_quad_buffers(&mut self) {
         let mut quad_vao = 0;

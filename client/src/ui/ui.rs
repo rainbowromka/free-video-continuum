@@ -1,51 +1,53 @@
-use crate::ui::elements::widget::Widget;
+use std::any::Any;
+
+use crate::ui::elements::{base::BaseElement, widget::Widget};
 
 
 pub struct Ui {
+    base: BaseElement,
     elements: Vec<Box<dyn Widget>>,
     new_elements: Vec<Box<dyn Widget>>,
-    client_width: u32,
-    client_height: u32,
-    bg_color: (f32, f32, f32),
+    // client_width: u32,
+    // client_height: u32,
+    // bg_color: (f32, f32, f32),
 }
 
 impl Ui {
-    pub fn new(client_width: u32, client_height: u32) -> Self {
+    pub fn new(width: u32, height: u32) -> Self {
         Self {
+            base: BaseElement::new(0, 0, width, height),
             elements: Vec::new(),
             new_elements: Vec::new(),
-            client_width,
-            client_height,
-            bg_color: hex_to_rgb(0x16, 0x19, 0x20),
         }
     }
     
     pub fn update_size(&mut self, w: u32, h: u32) {
-        self.client_width = w;
-        self.client_height = h;
+        self.base.width = w;
+        self.base.height = h;
     }
 
     pub fn resize(&mut self, w: u32, h: u32) {
         self.update_size(w, h);
-
-        // Помечаем всё рекурсивно dirty
-        for element in &mut self.elements {
-            element.mark_dirty_recursive();
-        }
-        for element in &mut self.new_elements {
-            element.mark_dirty_recursive();
-        }
+        self.mark_dirty_recursive();
     }
 
     pub fn client_width(&self) -> u32 {
-        self.client_width
+        self.base.width
     }
 
     pub fn client_height(&self) -> u32 {
-        self.client_height
+        self.base.height
     }
 
     pub fn render(&mut self) {
+        // Сначала подготовили текстуры
+        self.create_textures();
+
+        self.draw(self.base.width, self.base.height);
+    }
+
+    pub fn draw_all(&mut self)
+    {
         let new_count = self.new_elements.len();
 
         // Проходим по новым Rect'ам
@@ -54,7 +56,7 @@ impl Ui {
                 let old = &mut self.elements[index];
 
                 if old.as_any().type_id() == new_element.as_any().type_id() {
-                    old.update_from(new_element.as_ref());
+                    old.diff(new_element.as_ref());
                 } else {                
                     *old = new_element;
                 }                
@@ -68,62 +70,97 @@ impl Ui {
         self.elements.truncate(new_count);
 
         // Рендерим
-        self.draw();
+        self.render();
 
         self.new_elements.clear();
     }
 
-    pub fn draw(&mut self) {
-        // Сначала подготовили текстуры
+    pub fn set_client_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
+        self.base.color = hex_to_rgb(r, g, b);
+        self
+    }
+
+    pub fn handle_mouse_move(&mut self, x: f32, y: f32) {
+        // Получаем список событий для этого Ui из глобального реестра
+        let registry = EVENT_REGISTRY.lock().unwrap();
+        
+        if let Some(events) = registry.get(&self.id) {
+            // Ищем верхний EventRegion, содержащий точку
+            let mut topmost: Option<&EventRegion> = None;
+            let mut topmost_z: u32 = 0;
+
+            for region in events {
+                if region.rect.contains(x, y) && region.z >= topmost_z {
+                    topmost = Some(region);
+                    topmost_z = region.z;
+                }
+            }
+
+            // Вызвать замыкание
+            if let Some(region) = topmost {
+                (region.handler)();
+            }
+        }
+    }
+}
+
+impl Widget for Ui {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn base(&mut self) -> &mut BaseElement {
+        &mut self.base
+    }    
+
+    fn set_position(&mut self, x: u32, y: u32) {       
+    }
+
+    fn diff(&mut self, other: &dyn Widget) {
+    }
+
+    fn mark_dirty_recursive(&mut self) {
+        self.base.mark_dirty();
+        for element in &mut self.elements {
+            element.mark_dirty_recursive();
+        }
+        for element in &mut self.new_elements {
+            element.mark_dirty_recursive();
+        }
+    }
+
+    fn create_textures(&mut self) -> bool {
         for element in &mut self.elements {
             element.create_textures();
         }
+        true
+    }
 
-        let bg = self.bg_color();
+    fn draw(&mut self, parent_w: u32, parent_h: u32) {
+        let bg = self.base.color;
         unsafe {
-            gl::Viewport(0, 0, self.client_width as i32, self.client_height as i32);
+            gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
             gl::ClearColor(bg.0, bg.1, bg.2, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
         // Потом отрисовали
         for element in &mut self.elements {
-            element.draw(self.client_width, self.client_height);
-        }
+            element.draw(parent_w, parent_h);
+        }        
     }
 
-    pub fn set_client_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
-        self.bg_color = hex_to_rgb(r, g, b);
-        self
+    fn push_child(&mut self, child: Box<dyn Widget>) {
+        self.new_elements.push(child);
     }
 
-    pub fn bg_color(&self) -> (f32, f32, f32) {
-        self.bg_color
+    fn layout(&mut self) {        
     }
 
-    pub fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
-    where
-        T: Widget + Default + 'static,
-    {
-        let mut element = T::default();
-        configure(&mut element);
-        self.new_elements.push(Box::new(element));
-        self
+    fn prepare_default(&mut self, parent: &mut dyn Widget) {        
     }
 }
 
 fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
 }
-
-// impl AddElement for Ui {
-//     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
-//     where
-//         T: Widget + Default + 'static,
-//     {
-//         let mut element = T::default();
-//         configure(&mut element);
-//         self.new_elements.push(Box::new(element));
-//         self
-//     }
-// }

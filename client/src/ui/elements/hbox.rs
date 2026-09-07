@@ -120,9 +120,9 @@ impl Widget for HBox {
         }        
     }
 
-    fn update_from(&mut self, other: &dyn Widget) {
+    fn diff(&mut self, other: &dyn Widget) {
         if let Some(other_rect) = other.as_any().downcast_ref::<Self>() {
-            self.base.update_from(&other_rect.base);
+            self.base.diff(&other_rect.base);
         }
     }
 
