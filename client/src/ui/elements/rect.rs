@@ -1,4 +1,4 @@
-use crate::ui::elements::{base::BaseElement, widget::Widget};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}, events::UiId};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
@@ -130,6 +130,10 @@ impl Widget for Rect {
 
     fn push_child(&mut self, child: Box<dyn Widget>) {
         self.children.push(child);
+    }
+
+    fn register_events(&mut self, _ui_id: UiId) {
+        // нет событий
     }
 }
 

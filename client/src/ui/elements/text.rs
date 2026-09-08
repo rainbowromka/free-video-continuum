@@ -1,6 +1,5 @@
 use crate::ui::{
-    elements::{base::BaseElement, widget::Widget},
-    render::shader::{TEXTURE_PROGRAM,TEXT_PROGRAM}
+    elements::{base::BaseElement, widget::Widget}, events::UiId, render::shader::{TEXT_PROGRAM, TEXTURE_PROGRAM}
 };
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::font::FONT_MANAGER;
@@ -42,9 +41,7 @@ impl Text {
         }
         self
     }
-}
 
-impl Text {
     pub fn set_content(&mut self, content: &str) -> &mut Self {
         self.content = content.to_string();
         self
@@ -226,6 +223,10 @@ impl Widget for Text {
     }
     
     fn push_child(&mut self, child: Box<dyn Widget>) {
+    }
+
+    fn register_events(&mut self, _ui_id: UiId) {
+        // нет событий
     }
 }
 

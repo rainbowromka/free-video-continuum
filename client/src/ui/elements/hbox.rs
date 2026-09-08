@@ -1,4 +1,4 @@
-use crate::ui::elements::base::BaseElement;
+use crate::ui::{elements::base::BaseElement, events::UiId};
 use crate::ui::elements::widget::Widget;
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 use std::ops::{Deref, DerefMut};
@@ -138,6 +138,10 @@ impl Widget for HBox {
     fn push_child(&mut self, child: Box<dyn Widget>) {
         self.children.push(child);
     }
+
+    fn register_events(&mut self, _ui_id: UiId) {
+    // нет событий
+    }   
 }
 
 impl Deref for HBox {

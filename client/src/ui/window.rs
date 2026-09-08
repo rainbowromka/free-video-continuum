@@ -3,7 +3,6 @@ use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
 use glutin::{Api, ContextBuilder, GlRequest};
-use crate::ui::elements::widget::Widget;
 
 pub struct Window {
     width: u32,

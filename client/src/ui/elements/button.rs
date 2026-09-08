@@ -1,4 +1,4 @@
-use crate::ui::elements::{base::BaseElement, widget::Widget};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}, events::{EVENT_REGISTRY, EventRegion, UiId}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
@@ -153,6 +153,29 @@ impl Widget for Button {
 
     fn push_child(&mut self, child: Box<dyn Widget>) {
         self.child = Some(child);
+    }
+
+    fn register_events(&mut self, ui_id: UiId) {
+        let rect = (
+            self.base.x as f32,
+            self.base.y as f32,
+            self.base.width as f32,
+            self.base.height as f32
+        );            
+        let z = self.base.z;
+        
+        let region = EventRegion {
+            rect,
+            z,
+            handler: Box::new(move || {
+                // hover логика
+                println!("Button hovered!");
+            }),
+        };
+
+        EVENT_REGISTRY.lock().unwrap()
+            .entry(ui_id).or_default()
+            .push(region);
     }
 }
 

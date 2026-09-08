@@ -1,3 +1,5 @@
+use crate::ui::events::UiId;
+
 pub struct BaseElement {
     pub x: u32,
     pub y: u32,
@@ -5,6 +7,9 @@ pub struct BaseElement {
     pub height: u32,
     pub color: (f32, f32, f32),
     pub dirty: bool,
+    
+    pub z: u32,
+    pub ui_id: UiId,
 
     pub fbo: Option<gl::types::GLuint>,
     pub texture: Option<gl::types::GLuint>,
@@ -21,6 +26,8 @@ impl BaseElement {
             height,
             color: (0.2, 0.6, 1.0),
             dirty: true,            
+            z: 0,
+            ui_id: 0,
             fbo: None,
             texture: None,
             quad_vao: None,
