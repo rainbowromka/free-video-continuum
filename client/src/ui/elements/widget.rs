@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::ui::{elements::base::BaseElement, events::UiId};
+use crate::ui::{elements::base::BaseElement};
 
 pub trait Widget {
     fn as_any(&self) -> &dyn Any;    
@@ -17,12 +17,16 @@ pub trait Widget {
         let parent_base = parent.base();
         let color = parent_base.color();
         let z = parent_base.z + 1;
-        let ui_id = parent_base.ui_id;
 
         let base = self.base();
+
+        let abs_x = parent_base.abs_x + base.abs_x;
+        let abs_y = parent_base.abs_y + base.abs_y;
+
         base.set_color_raw(color.0, color.1, color.2);
         base.z = z;
-        base.ui_id = ui_id;
+        base.abs_x = abs_x;
+        base.abs_y = abs_y;
     }
 
     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
@@ -34,10 +38,33 @@ pub trait Widget {
         element.prepare_default(self);
         configure(&mut element);
         element.layout();
-        element.register_events(self.base().ui_id);
+        // element.register_events(self.base().ui_id);
         self.push_child(Box::new(element));
         self
     }    
 
-    fn register_events(&mut self, ui_id: UiId);
+    fn find_topmost(&mut self, x: f32, y: f32) -> Option<&mut BaseElement> {
+        let mut topmost: Option<&mut BaseElement> = None;
+        let mut topmost_z: u32 = 0;
+
+        let base = self.base();    
+
+        // Проверяем себя
+        if base.contains_point(x, y) {
+            topmost = Some(&mut self.base);
+            topmost_z = base.z;
+        }
+
+        // Проверяем детей — они поверх
+        for child in &mut self.children {
+            if let Some(base) = child.find_topmost(x, y) {
+                if base.z >= topmost_z {
+                    topmost = Some(base);
+                    topmost_z = base.z;
+                }
+            }
+        }
+
+        topmost
+    }
 }

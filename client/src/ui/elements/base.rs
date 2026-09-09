@@ -1,6 +1,8 @@
-use crate::ui::events::UiId;
+use crate::ui::elements::widget::Widget;
 
 pub struct BaseElement {
+    pub abs_x: u32,
+    pub abs_y: u32,
     pub x: u32,
     pub y: u32,
     pub width: u32,
@@ -9,7 +11,8 @@ pub struct BaseElement {
     pub dirty: bool,
     
     pub z: u32,
-    pub ui_id: UiId,
+
+    pub children: Vec<Box<dyn Widget>>,
 
     pub fbo: Option<gl::types::GLuint>,
     pub texture: Option<gl::types::GLuint>,
@@ -20,6 +23,8 @@ pub struct BaseElement {
 impl BaseElement {
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
+            abs_x: x,
+            abs_y: y,
             x,
             y,
             width,
@@ -27,7 +32,7 @@ impl BaseElement {
             color: (0.2, 0.6, 1.0),
             dirty: true,            
             z: 0,
-            ui_id: 0,
+            children: Vec::new(),
             fbo: None,
             texture: None,
             quad_vao: None,
@@ -35,12 +40,22 @@ impl BaseElement {
         }
     }
 
+    pub fn set_rect(&mut self, x: u32, y: u32, width: u32, height: u32) {
+        self.set_position(x, y);
+        // self.x = x;
+        // self.y = y;
+        self.width = width;
+        self.height = height;
+    }
+
     pub fn set_position(&mut self, x: u32, y: u32) {
-        if self.x != x || self.y != y {
-            self.x = x;
-            self.y = y;
-            self.dirty = true;
-        }
+        // if self.x != x || self.y != y {
+        self.abs_x = self.abs_x - self.x + x;
+        self.abs_y = self.abs_y - self.y + y;
+        self.x = x;
+        self.y = y;
+            // self.dirty = true;
+        // }
     }
 
     pub fn mark_dirty(&mut self) {

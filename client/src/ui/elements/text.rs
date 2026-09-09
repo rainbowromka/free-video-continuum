@@ -1,6 +1,4 @@
-use crate::ui::{
-    elements::{base::BaseElement, widget::Widget}, events::UiId, render::shader::{TEXT_PROGRAM, TEXTURE_PROGRAM}
-};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}, render::shader::{TEXT_PROGRAM, TEXTURE_PROGRAM}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::font::FONT_MANAGER;
 
@@ -223,10 +221,6 @@ impl Widget for Text {
     }
     
     fn push_child(&mut self, child: Box<dyn Widget>) {
-    }
-
-    fn register_events(&mut self, _ui_id: UiId) {
-        // нет событий
     }
 }
 

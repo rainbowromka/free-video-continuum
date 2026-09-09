@@ -1,10 +1,9 @@
-use crate::ui::{elements::{base::BaseElement, widget::Widget}, events::UiId};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
 pub struct Rect {
     pub base: BaseElement,
-    children: Vec<Box<dyn Widget>>,
 }
 
 impl Rect {
@@ -21,7 +20,7 @@ impl Rect {
         self.base.width = width;
         self.base.height = height;
         self
-    }    
+    }
 
     pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
         self.base.set_color(r, g, b);
@@ -64,6 +63,9 @@ impl Widget for Rect {
         self.base.lazy_init();
 
         if self.base.dirty {
+            let w = self.base.width;
+            let h = self.base.height;
+
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
                 gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
@@ -79,8 +81,8 @@ impl Widget for Rect {
 
                 // Дети поверх
                 for element in &mut self.children {
-                    gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
-                    element.draw(self.base.width, self.base.height);
+                    gl::Viewport(0, 0, w as i32, h as i32);
+                    element.draw(w, h);
                 }
 
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
@@ -130,10 +132,6 @@ impl Widget for Rect {
 
     fn push_child(&mut self, child: Box<dyn Widget>) {
         self.children.push(child);
-    }
-
-    fn register_events(&mut self, _ui_id: UiId) {
-        // нет событий
     }
 }
 

@@ -1,10 +1,8 @@
 use std::any::Any;
-use std::sync::atomic::Ordering;
 
-use crate::ui::{elements::{base::BaseElement, widget::Widget}, events::{EVENT_REGISTRY, EventRegion, NEXT_UI_ID, UiId}};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}};
 
 pub struct Ui {
-    id: UiId,
     base: BaseElement,
     elements: Vec<Box<dyn Widget>>,
     new_elements: Vec<Box<dyn Widget>>,
@@ -15,22 +13,13 @@ pub struct Ui {
 
 impl Ui {
     pub fn new(width: u32, height: u32) -> Self {
-        let id = NEXT_UI_ID.fetch_add(1, Ordering::Relaxed);
-        
-        EVENT_REGISTRY.lock().unwrap().insert(id, Vec::new());
-
         Self {
-            id,
             base: BaseElement::new(0, 0, width, height),
             elements: Vec::new(),
             new_elements: Vec::new(),
         }
     }
 
-    pub fn id(&self) -> UiId{
-        self.id
-    }
-    
     pub fn update_size(&mut self, w: u32, h: u32) {
         self.base.width = w;
         self.base.height = h;
@@ -90,24 +79,11 @@ impl Ui {
         self
     }
 
-    pub fn handle_mouse_move(&mut self, x: f32, y: f32) {
-        if let Some(events) = EVENT_REGISTRY.lock().unwrap().get_mut(&self.id) {
-            let mut topmost: Option<&mut EventRegion> = None;
-            let mut topmost_z: u32 = 0;
+    pub fn handle_mouse_move(&mut self, x: f32, y: f32) {        
+        let topmost = self.find_topmost(x, y);
 
-            for region in events.iter_mut() {
-                let region_z = region.z;
-
-                if region.contains(x, y) && region.z >= topmost_z {
-                    topmost = Some(region);
-                    topmost_z = region_z;
-                }
-            }
-
-            if let Some(region) = topmost {
-                (region.handler)();
-            }
-        }
+        // TODO: если найден элемент — проверяем hover,
+        // если hover есть — запускаем обработчик
     }
 }
 
@@ -166,18 +142,8 @@ impl Widget for Ui {
 
     fn prepare_default(&mut self, parent: &mut dyn Widget) {        
     }
-    
-    fn register_events(&mut self, _ui_id: UiId) {
-        // нет событий
-    }
 }
 
 fn hex_to_rgb(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
-}
-
-impl Drop for Ui {
-    fn drop(&mut self) {
-        EVENT_REGISTRY.lock().unwrap().remove(&self.id);
-    }
 }

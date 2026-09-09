@@ -1,10 +1,9 @@
-use crate::ui::{elements::{base::BaseElement, widget::Widget}, events::{EVENT_REGISTRY, EventRegion, UiId}};
-use std::{any::Any, ops::{Deref, DerefMut}};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}};
+use std::{any::Any};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
 pub struct Button {
     pub base: BaseElement,
-    child: Option<Box<dyn Widget>>,
     min_width: u32,
     min_height: u32,
 }
@@ -13,7 +12,6 @@ impl Button {
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             base: BaseElement::new(x, y, width, height),
-            child: None,
             min_width: width,
             min_height: height,
         }
@@ -55,8 +53,8 @@ impl Widget for Button {
     fn create_textures(&mut self) -> bool {
         let mut dirty = false;
         
-        if let Some(child) = &mut self.child {
-            if child.create_textures() {
+        for element in &mut self.base.children {
+            if element.create_textures() {
                 dirty = true;
             }
         }
@@ -68,6 +66,9 @@ impl Widget for Button {
         self.base.lazy_init();
 
         if self.base.dirty {
+            let w = self.base.width;
+            let h = self.base.height;
+
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
                 gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
@@ -81,10 +82,10 @@ impl Widget for Button {
                 );
                 gl::Clear(gl::COLOR_BUFFER_BIT);
 
-                if let Some(child) = &mut self.child {
-                    gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
-                    child.draw(self.base.width, self.base.height);
-                }               
+                for element in &mut self.base.children {
+                    gl::Viewport(0, 0, w as i32, h as i32);
+                    element.draw(w, h);
+                }
 
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             }
@@ -123,17 +124,24 @@ impl Widget for Button {
 
     fn mark_dirty_recursive(&mut self) {
         self.base.mark_dirty();
-        if let Some(child) = &mut self.child {
+        for child in &mut self.children {
             child.mark_dirty_recursive();
-        }
+        }        
     }
 
     fn layout(&mut self) {
-        // Расширяем под ребёнка
-        if let Some(child) = &mut self.child {
-            let child_w = child.base().width;
-            let child_h = child.base().height;
+        // Шаг 1: читаем размеры ребёнка (immutable borrow)
+        let child_size = {
+            if let Some(child) = self.base.children.first() {
+                let b = child;
+                Some((b.width, b.height))
+            } else {
+                None
+            }
+        };
 
+        // Шаг 2: если есть ребёнок — обновляем размеры кнопки
+        if let Some((child_w, child_h)) = child_size {
             let new_width = self.min_width.max(child_w);
             let new_height = self.min_height.max(child_h);
 
@@ -144,52 +152,18 @@ impl Widget for Button {
                 self.base.mark_dirty();
             }
 
-            // Центрируем ребёнка
+            // Шаг 3: позиционируем ребёнка (отдельный mutable borrow)
             let x = (self.base.width - child_w) / 2;
             let y = (self.base.height - child_h) / 2;
-            child.set_position(x, y);
+
+            if let Some(child) = self.base.children.first_mut() {
+                child.set_position(x, y);
+            }
         }
     }
 
     fn push_child(&mut self, child: Box<dyn Widget>) {
-        self.child = Some(child);
-    }
-
-    fn register_events(&mut self, ui_id: UiId) {
-        let rect = (
-            self.base.x as f32,
-            self.base.y as f32,
-            self.base.width as f32,
-            self.base.height as f32
-        );            
-        let z = self.base.z;
-        
-        let region = EventRegion {
-            rect,
-            z,
-            handler: Box::new(move || {
-                // hover логика
-                println!("Button hovered!");
-            }),
-        };
-
-        EVENT_REGISTRY.lock().unwrap()
-            .entry(ui_id).or_default()
-            .push(region);
-    }
-}
-
-impl Deref for Button {
-    type Target = BaseElement;
-
-    fn deref(&self) -> &BaseElement {
-        &self.base
-    }
-}
-
-impl DerefMut for Button {
-    fn deref_mut(&mut self) -> &mut BaseElement {
-        &mut self.base
+        self.base.children.push(child);
     }
 }
 
@@ -198,16 +172,3 @@ impl Default for Button {
         Button::new(0, 0, 0, 0)
     }
 }
-
-// impl AddElement for Button {
-//     fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
-//     where
-//         T: Widget + Default + 'static,
-//     {
-//         let mut element = T::default();
-//         configure(&mut element);
-//         element.layout();
-//         self.child = Some(Box::new(element));
-//         self
-//     }
-// }
