@@ -79,9 +79,7 @@ impl Ui {
         self
     }
 
-    pub fn handle_mouse_move(&mut self, x: f32, y: f32) {        
-        let topmost = self.find_topmost(x, y);
-
+    pub fn handle_mouse_move(&mut self, x: f32, y: f32) {
         // TODO: если найден элемент — проверяем hover,
         // если hover есть — запускаем обработчик
     }

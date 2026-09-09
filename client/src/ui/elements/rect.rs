@@ -10,7 +10,6 @@ impl Rect {
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             base: BaseElement::new(x, y, width, height),
-            children: Vec::new(),
         }
     }
 

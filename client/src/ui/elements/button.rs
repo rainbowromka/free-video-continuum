@@ -124,43 +124,40 @@ impl Widget for Button {
 
     fn mark_dirty_recursive(&mut self) {
         self.base.mark_dirty();
-        for child in &mut self.children {
+        for child in &mut self.base.children {
             child.mark_dirty_recursive();
         }        
     }
 
     fn layout(&mut self) {
-        // Шаг 1: читаем размеры ребёнка (immutable borrow)
-        let child_size = {
-            if let Some(child) = self.base.children.first() {
-                let b = child;
-                Some((b.width, b.height))
-            } else {
-                None
-            }
-        };
+        
+        let mut new_width = self.min_width;
+        let mut new_height = self.min_height;
 
-        // Шаг 2: если есть ребёнок — обновляем размеры кнопки
-        if let Some((child_w, child_h)) = child_size {
-            let new_width = self.min_width.max(child_w);
-            let new_height = self.min_height.max(child_h);
+        if let Some(child) = &mut self.base.children.first_mut() {
+            
+            let child_w = child.base().width;
+            let child_h = child.base().height;
 
-            if self.base.width != new_width || self.base.height != new_height {
-                self.base.width = new_width;
-                self.base.height = new_height;
-                self.base.recreate_fbo();
-                self.base.mark_dirty();
-            }
+            new_width = new_width.max(child_w);
+            new_height = new_height.max(child_h);
 
-            // Шаг 3: позиционируем ребёнка (отдельный mutable borrow)
+            // Центрируем ребёнка
             let x = (self.base.width - child_w) / 2;
             let y = (self.base.height - child_h) / 2;
+            child.set_position(x, y);            
+        }
 
-            if let Some(child) = self.base.children.first_mut() {
-                child.set_position(x, y);
-            }
+        let base = &mut self.base;
+
+        if base.width != new_width || base.height != new_height {
+            base.width = new_width;
+            base.height = new_height;
+            base.recreate_fbo();
+            base.mark_dirty();
         }
     }
+
 
     fn push_child(&mut self, child: Box<dyn Widget>) {
         self.base.children.push(child);

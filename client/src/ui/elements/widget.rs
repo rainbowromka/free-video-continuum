@@ -41,30 +41,5 @@ pub trait Widget {
         // element.register_events(self.base().ui_id);
         self.push_child(Box::new(element));
         self
-    }    
-
-    fn find_topmost(&mut self, x: f32, y: f32) -> Option<&mut BaseElement> {
-        let mut topmost: Option<&mut BaseElement> = None;
-        let mut topmost_z: u32 = 0;
-
-        let base = self.base();    
-
-        // Проверяем себя
-        if base.contains_point(x, y) {
-            topmost = Some(&mut self.base);
-            topmost_z = base.z;
-        }
-
-        // Проверяем детей — они поверх
-        for child in &mut self.children {
-            if let Some(base) = child.find_topmost(x, y) {
-                if base.z >= topmost_z {
-                    topmost = Some(base);
-                    topmost_z = base.z;
-                }
-            }
-        }
-
-        topmost
     }
 }

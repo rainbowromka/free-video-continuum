@@ -247,6 +247,13 @@ impl BaseElement {
             self.dirty = true;
         }
     }
+
+    pub fn contains_point(&self, x: f32, y: f32) -> bool {
+        x >= self.abs_x as f32
+            && x <= (self.abs_x + self.width) as f32
+            && y >= self.abs_y as f32
+            && y <= (self.abs_y + self.height) as f32
+    }
 }
 
 impl Drop for BaseElement {
