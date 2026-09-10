@@ -7,6 +7,7 @@
 struct GLFWwindow;
 
 class Ui;
+class Renderer;
 
 class Window {
 public:
@@ -30,6 +31,7 @@ private:
     std::function<void(Ui&)> onDraw_;
 
     GLFWwindow* window_ = nullptr;
+    Renderer* renderer_ = nullptr;
 
     void initGlfw();
     void createWindow();

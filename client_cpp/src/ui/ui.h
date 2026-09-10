@@ -17,4 +17,7 @@ public:
     bool isDirty() const;
 
     void render();
+    
+    bool createTextures() override;
+    void draw(int parent_w, int parent_h) override;    
 };

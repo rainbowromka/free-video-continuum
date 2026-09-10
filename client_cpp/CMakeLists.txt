@@ -13,6 +13,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
+# glad (локально)
+add_library(glad STATIC
+    third_party/glad/src/gl.c
+)
+target_include_directories(glad PUBLIC
+    third_party/glad/include/
+)
+
 # OpenGL
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
@@ -29,6 +37,7 @@ target_include_directories(continuum_client PRIVATE src)
 
 target_link_libraries(continuum_client
     glfw
+    glad
     OpenGL::GL
 )
 

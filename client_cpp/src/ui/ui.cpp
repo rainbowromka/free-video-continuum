@@ -40,7 +40,31 @@ bool Ui::isDirty() const {
 }
 
 void Ui::render() {
-    // Пока ничего — заглушка
-    // Позже: createTextures + draw
-    dirty_ = false;
+    createTextures();
+    draw(width_, height_);
+}
+
+bool Ui::createTextures() {
+    // bool any_dirty = false;
+
+    for (auto& child : children_) {
+        // if (child->createTextures()) {
+        //     any_dirty = true;        
+        // }
+        // а если так
+        dirty_ = child->createTextures();
+    }
+
+    // if (any_dirty) {
+    //     dirty_ = true;
+    // }
+
+    // return any_dirty;
+    return dirty_;
+}
+
+void Ui::draw(int parent_w, int parent_h) {
+    for (auto& child : children_) {
+        child->draw(parent_w, parent_h);
+    }
 }
