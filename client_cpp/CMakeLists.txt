@@ -14,11 +14,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw)
 
 # OpenGL
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 
-add_executable(continuum_client
-    src/main.cpp
+# Все .cpp файлы в src/ рекурсивно
+file(GLOB_RECURSE SOURCES
+    "src/*.cpp"
 )
+
+add_executable(continuum_client ${SOURCES})
+
+# Заголовки — в src/
+target_include_directories(continuum_client PRIVATE src)
 
 target_link_libraries(continuum_client
     glfw

@@ -1,33 +1,16 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <ui/window.h>
 
 int main() {
-    if (!glfwInit()) {
-        std::cerr << "Failed to init GLFW" << std::endl;
-        return -1;
-    }
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
-    GLFWwindow* window = glfwCreateWindow(1024, 780, "Free Video Continuum", nullptr, nullptr);
-    if (!window) {
-        std::cerr << "Failed to create window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-
-    glfwMakeContextCurrent(window);
-
-    glClearColor(0.09f, 0.10f, 0.13f, 1.0f);
-
-    while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    Window window;
+    window.setSize(1024, 780)
+        .setTitle("Free Video Continuum")
+        .setClientColor(0x17, 0x1a, 0x21)
+        .onDraw([](Ui& ui) {
+            // ...
+        })
+        .run();
+    
     return 0;
 }
