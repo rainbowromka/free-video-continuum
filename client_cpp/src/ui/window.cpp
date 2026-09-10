@@ -1,4 +1,5 @@
 #include "ui/window.h"
+#include "ui/ui.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 
@@ -20,8 +21,9 @@ Window& Window::setTitle(const std::string& title) {
 }
 
 Window& Window::setClientColor(uint8_t r, uint8_t g, uint8_t b) {
-    // пока заглушка — цвет фона
-    (void)r; (void)g; (void)b;
+    client_r_ = r;
+    client_g_ = g;
+    client_b_ = b;
     return *this;
 }
 
@@ -30,16 +32,41 @@ Window& Window::onDraw(std::function<void(Ui&)> callback) {
     return *this;
 }
 
+
+
 void Window::run() {
     initGlfw();
     createWindow();
     initOpenGL();
 
-    glClearColor(0.09f, 0.10f, 0.13f, 1.0f);
+    // glClearColor(0.09f, 0.10f, 0.13f, 1.0f);
+
+    Ui ui(width_, height_);
+    ui.setClientColor(0x16, 0x19, 0x20);
+
+    if (onDraw_) onDraw_(ui);
 
     while (!glfwWindowShouldClose(window_)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-        glfwSwapBuffers(window_);
+        int w, h;
+        glfwGetFramebufferSize(window_, &w, &h);
+
+        if (w != ui.clientWidth() || h != ui.clientHeight()) {
+            ui.setSize(w, h);
+            if (onDraw_) onDraw_(ui);
+        }
+
+        if (ui.isDirty()) {
+            glViewport(0, 0, w, h);
+
+            // Очистка экрана
+            glClearColor(0.09f, 0.10f, 0.13f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            ui.render();
+
+            glfwSwapBuffers(window_);
+        }
+
         glfwPollEvents();
     }
 }
