@@ -1,7 +1,4 @@
-use crate::ui::{
-    elements::{base::BaseElement, common::Widget},
-    render::shader::{TEXTURE_PROGRAM,TEXT_PROGRAM}
-};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}, render::shader::{TEXT_PROGRAM, TEXTURE_PROGRAM}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::font::FONT_MANAGER;
 
@@ -42,9 +39,7 @@ impl Text {
         }
         self
     }
-}
 
-impl Text {
     pub fn set_content(&mut self, content: &str) -> &mut Self {
         self.content = content.to_string();
         self
@@ -139,17 +134,17 @@ impl Widget for Text {
         self
     }
 
-    fn base(&self) -> &BaseElement {
-        &self.base
+    fn base(&mut self) -> &mut BaseElement {
+        &mut self.base
     }
 
     fn set_position(&mut self, x: u32, y: u32) {
         self.base.set_position(x, y);
     }
 
-    fn update_from(&mut self, other: &dyn Widget) {
+    fn diff(&mut self, other: &dyn Widget) {
         if let Some(other_text) = other.as_any().downcast_ref::<Text>() {
-            self.base.update_from(&other_text.base);
+            self.base.diff(&other_text.base);
             
             if self.content != other_text.content {
                 self.content = other_text.content.clone();
@@ -223,6 +218,9 @@ impl Widget for Text {
     }
 
     fn layout(&mut self) {        
+    }
+    
+    fn push_child(&mut self, child: Box<dyn Widget>) {
     }
 }
 

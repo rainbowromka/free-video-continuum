@@ -80,6 +80,9 @@ impl Window {
                         gl_context.resize(physical_size);
                         ui.resize(physical_size.width, physical_size.height);
                     }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        ui.handle_mouse_move(position.x as f32, position.y as f32);
+                    }
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     _ => (),
                 },
@@ -89,7 +92,7 @@ impl Window {
                     
                     on_draw(&mut ui);
 
-                    ui.render();
+                    ui.draw_all();
                     gl_context.swap_buffers().unwrap();
                 }
                 _ => (),

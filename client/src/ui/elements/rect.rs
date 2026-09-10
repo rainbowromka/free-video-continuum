@@ -1,17 +1,15 @@
-use crate::ui::elements::{base::BaseElement, common::{AddElement, Widget}};
+use crate::ui::{elements::{base::BaseElement, widget::Widget}};
 use std::{any::Any, ops::{Deref, DerefMut}};
 use crate::ui::render::shader::TEXTURE_PROGRAM;
 
 pub struct Rect {
     pub base: BaseElement,
-    children: Vec<Box<dyn Widget>>,
 }
 
 impl Rect {
     pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
         Self {
             base: BaseElement::new(x, y, width, height),
-            children: Vec::new(),
         }
     }
 
@@ -21,7 +19,7 @@ impl Rect {
         self.base.width = width;
         self.base.height = height;
         self
-    }    
+    }
 
     pub fn set_color(&mut self, r: u8, g: u8, b: u8) -> &mut Self {
         self.base.set_color(r, g, b);
@@ -34,17 +32,17 @@ impl Widget for Rect {
         self
     }
     
-    fn base(&self) -> &BaseElement {
-        &self.base
+    fn base(&mut self) -> &mut BaseElement {
+        &mut self.base
     }
 
     fn set_position(&mut self, x: u32, y: u32) {
         self.base.set_position(x, y);
     }
 
-    fn update_from(&mut self, other: &dyn Widget) {
+    fn diff(&mut self, other: &dyn Widget) {
         if let Some(other_rect) = other.as_any().downcast_ref::<Rect>() {
-            self.base.update_from(&other_rect.base);
+            self.base.diff(&other_rect.base);
         }
     }    
     
@@ -64,6 +62,9 @@ impl Widget for Rect {
         self.base.lazy_init();
 
         if self.base.dirty {
+            let w = self.base.width;
+            let h = self.base.height;
+
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.base.fbo.unwrap());
                 gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
@@ -79,8 +80,8 @@ impl Widget for Rect {
 
                 // Дети поверх
                 for element in &mut self.children {
-                    gl::Viewport(0, 0, self.base.width as i32, self.base.height as i32);
-                    element.draw(self.base.width, self.base.height);
+                    gl::Viewport(0, 0, w as i32, h as i32);
+                    element.draw(w, h);
                 }
 
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
@@ -127,6 +128,10 @@ impl Widget for Rect {
 
     fn layout(&mut self) {        
     }
+
+    fn push_child(&mut self, child: Box<dyn Widget>) {
+        self.children.push(child);
+    }
 }
 
 impl Deref for Rect {
@@ -146,18 +151,5 @@ impl DerefMut for Rect {
 impl Default for Rect {
     fn default() -> Self {
         Rect::new(0, 0, 0, 0)
-    }
-}
-
-impl AddElement for Rect {
-    fn add<T>(&mut self, configure: impl FnOnce(&mut T)) -> &mut Self
-    where
-        T: Widget + Default + 'static,
-    {
-        let mut element = T::default();
-        configure(&mut element);
-        element.layout();
-        self.children.push(Box::new(element));
-        self
     }
 }

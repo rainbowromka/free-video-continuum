@@ -26,3 +26,9 @@ ffmpeg/
 # Временные файлы
 tmp/
 temp/
+
+# C++ / CMake
+client_cpp/build/
+client_cpp/.cache/
+build/
+.cache/
