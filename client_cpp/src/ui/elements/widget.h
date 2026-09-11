@@ -4,7 +4,7 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
-// #include <iostream>
+#include <iostream>
 
 class Widget {
 public:
@@ -15,6 +15,7 @@ public:
 
     virtual bool createTextures() { return false; }
     virtual void draw(int parent_w, int parent_h) { (void)parent_w; (void)parent_h; }
+    virtual bool isDirty() const { return dirty_; }
 
     template<typename T, typename F>
     Widget& add(F configure) {
@@ -48,6 +49,11 @@ public:
         element->resetChildCount();
         configure(*element);
         element->truncChildren();
+
+        std::cout << "[ADD] before return: element->dirty=" << element->isDirty() 
+            << " self->dirty=" << dirty_ << std::endl;
+
+
         return *this;
     }
 
@@ -62,6 +68,8 @@ public:
     }
 
 protected:
+    int x_ = 0;
+    int y_ = 0;
     int width_ = 0;
     int height_ = 0;
     uint8_t bg_r_ = 0x16, bg_g_ = 0x19, bg_b_ = 0x20;
@@ -70,4 +78,14 @@ protected:
     int index_ = 0;
 
     std::vector<std::unique_ptr<Widget>> children_;
+
+    unsigned int fbo_ = 0;
+    unsigned int texture_ = 0;
+    unsigned int quad_vao_ = 0;
+    unsigned int quad_vbo_ = 0;
+
+    void lazyInit();
+    void initFbo();
+    void initQuadBuffers();
+    void recreateFbo();    
 };

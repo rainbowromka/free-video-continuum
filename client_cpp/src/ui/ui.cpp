@@ -1,5 +1,6 @@
 #include "ui/ui.h"
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 Ui::Ui(int width, int height)
     : Widget(width, height)
@@ -45,26 +46,25 @@ void Ui::render() {
 }
 
 bool Ui::createTextures() {
-    // bool any_dirty = false;
+    bool was_dirty = dirty_;
+    std::cout << "[Ui ENTER] ui.dirty=" << dirty_ << std::endl;
 
     for (auto& child : children_) {
-        // if (child->createTextures()) {
-        //     any_dirty = true;        
-        // }
-        // а если так
-        dirty_ = child->createTextures();
+        dirty_ |= child->createTextures();
     }
 
-    // if (any_dirty) {
-    //     dirty_ = true;
-    // }
-
-    // return any_dirty;
-    return dirty_;
+    std::cout << "[Ui EXIT] was_dirty=" << was_dirty << " now=" << dirty_ << std::endl;
+    return was_dirty;
 }
 
 void Ui::draw(int parent_w, int parent_h) {
-    for (auto& child : children_) {
+    glViewport(0, 0, width_, height_);
+    glClearColor(bg_r_ / 255.0f, bg_g_ / 255.0f, bg_b_ / 255.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);    
+
+    for (auto& child : children_) {        
         child->draw(parent_w, parent_h);
     }
+
+    dirty_ = false;
 }

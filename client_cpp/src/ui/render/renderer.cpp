@@ -3,6 +3,11 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+Renderer& Renderer::instance() {
+    static Renderer r;
+    return r;
+}
+
 static const char* RECT_VS = R"(
 #version 330 core
 layout (location = 0) in vec2 position;
@@ -41,13 +46,8 @@ void main() {
 }
 )";
 
-Renderer::Renderer() {}
-Renderer::~Renderer() {}
-
-bool Renderer::init() {
-    if (!initQuad()) return false;
-    if (!initPrograms()) return false;
-    return true;
+bool Renderer::init() {    
+    return initPrograms();
 }
 
 void Renderer::clear(float r, float g, float b) {
@@ -101,32 +101,4 @@ bool Renderer::initPrograms() {
     texture_program_ = linkProgram(tex_vs, tex_fs);
 
     return rect_program_ != 0 && texture_program_ != 0;
-}
-
-bool Renderer::initQuad() {
-    // Полноэкранный квад -1..1 с UV
-    float vertices[] = {
-        -1.0f,  1.0f, 0.0f, 0.0f,
-        -1.0f, -1.0f, 0.0f, 1.0f,
-         1.0f, -1.0f, 1.0f, 1.0f,
-        -1.0f,  1.0f, 0.0f, 0.0f,
-         1.0f, -1.0f, 1.0f, 1.0f,
-         1.0f,  1.0f, 1.0f, 0.0f,
-    };
-
-    glGenVertexArrays(1, &quad_vao_);
-    glGenBuffers(1, &quad_vbo_);
-
-    glBindVertexArray(quad_vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, quad_vbo_);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindVertexArray(0);
-    return true;
 }

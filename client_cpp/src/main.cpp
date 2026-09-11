@@ -1,5 +1,4 @@
 #include <GLFW/glfw3.h>
-#include <iostream>
 #include <ui/window.h>
 #include <ui/ui.h>
 #include <ui/elements/rect.h>

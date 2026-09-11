@@ -35,18 +35,18 @@ Window& Window::onDraw(std::function<void(Ui&)> callback) {
 }
 
 void Window::run() {
- initGlfw();
+    initGlfw();
     createWindow();
     initOpenGL();
 
-    Renderer renderer;
+    Renderer& renderer = Renderer::instance();
     if (!renderer.init()) {
         std::cerr << "Failed to init renderer" << std::endl;
         return;
     }
 
     Ui ui(width_, height_);
-    ui.setClientColor(0x16, 0x19, 0x20);
+    ui.setClientColor(client_r_, client_g_, client_b_);
 
     bool first_frame = true;
 
@@ -64,8 +64,6 @@ void Window::run() {
 
         if (ui.isDirty()) {
             glViewport(0, 0, w, h);
-
-            renderer.clear(0.09f, 0.10f, 0.13f);
             ui.render();
             glfwSwapBuffers(window_);
         }
