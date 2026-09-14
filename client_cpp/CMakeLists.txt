@@ -13,22 +13,34 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
+# FreeType — отключаем лишнее
+set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_BZIP2   ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_PNG     ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_BROTLI  ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_ZLIB    ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    freetype
+    GIT_REPOSITORY https://github.com/freetype/freetype.git
+    GIT_TAG VER-2-13-3
+)
+FetchContent_MakeAvailable(freetype)
+
 # glad (локально)
 add_library(glad STATIC
     third_party/glad/src/gl.c
 )
 target_include_directories(glad PUBLIC
-    third_party/glad/include/
+    third_party/glad/include
 )
 
 # OpenGL
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 
-# Все .cpp файлы в src/ рекурсивно
-file(GLOB_RECURSE SOURCES
-    "src/*.cpp"
-)
+# Все .cpp из src/
+file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(continuum_client ${SOURCES})
 
@@ -39,6 +51,7 @@ target_link_libraries(continuum_client
     glfw
     glad
     OpenGL::GL
+    freetype
 )
 
 # Windows — дополнительно opengl32

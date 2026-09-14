@@ -4,7 +4,6 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 
 class Widget {
 public:
@@ -43,16 +42,10 @@ public:
             }
         }
 
-        // std::cout << "[ADD] " << action << " index=" << child_count_ << std::endl;
-
         child_count_++;
         element->resetChildCount();
         configure(*element);
         element->truncChildren();
-
-        std::cout << "[ADD] before return: element->dirty=" << element->isDirty() 
-            << " self->dirty=" << dirty_ << std::endl;
-
 
         return *this;
     }
