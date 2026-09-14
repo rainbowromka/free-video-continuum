@@ -8,6 +8,7 @@ public:
 
     unsigned int rectProgram() const { return rect_program_; }
     unsigned int textureProgram() const { return texture_program_; }
+    unsigned int textProgram() const { return text_program_; }
 
     void clear(float r, float g, float b);
 
@@ -19,6 +20,7 @@ private:
 
     unsigned int rect_program_ = 0;
     unsigned int texture_program_ = 0;
+    unsigned int text_program_ = 0;
 
     unsigned int compileShader(unsigned int type, const char* source);
     unsigned int linkProgram(unsigned int vs, unsigned int fs);

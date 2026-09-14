@@ -1,0 +1,23 @@
+#pragma once
+
+#include "ui/elements/widget.h"
+#include <string>
+
+class Text : public Widget {
+public:
+    Text() = default;
+    ~Text() = default;
+
+    Text& setContent(const std::string& content);
+    Text& setTextColor(uint8_t r, uint8_t g, uint8_t b);
+    Text& setFontSize(int size);
+    Text& setHeight(int height);
+
+    bool createTextures() override;
+    void draw(int parent_w, int parent_h) override;
+
+protected:
+    std::string content_;
+    uint8_t text_r_ = 0xff, text_g_ = 0xff, text_b_ = 0xff;
+};
+
