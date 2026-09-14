@@ -7,6 +7,7 @@
 struct GLFWwindow;
 
 class Ui;
+class Renderer;
 
 class Window {
 public:
@@ -22,10 +23,15 @@ public:
 private:
     int width_ = 1024;
     int height_ = 780;
+    uint8_t client_r_ = 0x16;
+    uint8_t client_g_ = 0x19;
+    uint8_t client_b_ = 0x20;
+
     std::string title_ = "Free Video Continuum";
     std::function<void(Ui&)> onDraw_;
 
     GLFWwindow* window_ = nullptr;
+    Renderer* renderer_ = nullptr;
 
     void initGlfw();
     void createWindow();

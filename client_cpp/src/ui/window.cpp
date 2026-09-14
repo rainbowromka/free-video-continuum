@@ -1,6 +1,9 @@
 #include "ui/window.h"
+#include "ui/ui.h"
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include "ui/render/renderer.h"
 
 Window::Window() {}
 
@@ -20,8 +23,9 @@ Window& Window::setTitle(const std::string& title) {
 }
 
 Window& Window::setClientColor(uint8_t r, uint8_t g, uint8_t b) {
-    // пока заглушка — цвет фона
-    (void)r; (void)g; (void)b;
+    client_r_ = r;
+    client_g_ = g;
+    client_b_ = b;
     return *this;
 }
 
@@ -35,11 +39,35 @@ void Window::run() {
     createWindow();
     initOpenGL();
 
-    glClearColor(0.09f, 0.10f, 0.13f, 1.0f);
+    Renderer& renderer = Renderer::instance();
+    if (!renderer.init()) {
+        std::cerr << "Failed to init renderer" << std::endl;
+        return;
+    }
+
+    Ui ui(width_, height_);
+    ui.setClientColor(client_r_, client_g_, client_b_);
+
+    bool first_frame = true;
 
     while (!glfwWindowShouldClose(window_)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-        glfwSwapBuffers(window_);
+        int w, h;
+        glfwGetFramebufferSize(window_, &w, &h);
+
+        if (first_frame ||  w != ui.clientWidth() || h != ui.clientHeight()) {
+            ui.setSize(w, h);
+            ui.resetChildCount();
+            if (onDraw_) onDraw_(ui);
+            ui.truncChildren();
+            first_frame = false;
+        }
+
+        if (ui.isDirty()) {
+            glViewport(0, 0, w, h);
+            ui.render();
+            glfwSwapBuffers(window_);
+        }
+
         glfwPollEvents();
     }
 }
@@ -63,10 +91,16 @@ void Window::createWindow() {
         std::exit(-1);
     }
     glfwMakeContextCurrent(window_);
+
+    glfwSetWindowSizeLimits(window_, width_, height_, GLFW_DONT_CARE, GLFW_DONT_CARE);
 }
 
 void Window::initOpenGL() {
-    // пока ничего
+    int version = gladLoadGL(glfwGetProcAddress);
+    if (version == 0) {
+        std::cerr << "Failed to init GLAD" << std::endl;
+        std::exit(-1);
+    }
 }
 
 void Window::cleanup() {
