@@ -31,11 +31,14 @@ int main() {
                 .add<Rect>([](Rect& r){ r
                     .setRect(10,10, 200, 22)
                     .add<Text>([](Text& t){ t
-                        .setRect(1, 1, 100, 20)
                         .setContent("Медиа:")
                         .setTextColor(0xff, 0xff, 0xff)
-                        .setFontSize(20)
-                        ;
+                        // .setHeight(20)
+                    //     .setRect(1, 1, 100, 20)
+                    //     .setContent("Медиа:")
+                    //     .setTextColor(0xff, 0xff, 0xff)
+                    //     .setFontSize(20)
+                         ;
                     });
                 // })
                 // .add::<HBox>(|h|{h

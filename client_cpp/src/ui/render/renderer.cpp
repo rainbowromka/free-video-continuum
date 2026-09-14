@@ -64,8 +64,8 @@ uniform vec3 text_color;
 in vec2 v_texcoord;
 out vec4 FragColor;
 void main() {
-    vec3 glyph = texture(tex, v_texcoord).rgb;
-    FragColor = vec4(text_color * glyph, 1.0);
+    float a = texture(tex, v_texcoord).r;
+    FragColor = vec4(text_color * a, 1.0);
 }
 )";
 

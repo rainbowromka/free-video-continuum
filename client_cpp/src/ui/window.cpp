@@ -40,7 +40,7 @@ void Window::run() {
     createWindow();
     initOpenGL();
 
-    FontManager::instance().init("assets/DejaVuSansMono.ttf", 16);
+    FontManager::instance().init("assets/DejaVuSansMono.ttf");
 
     Renderer& renderer = Renderer::instance();
     if (!renderer.init()) {
