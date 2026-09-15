@@ -12,7 +12,7 @@ public:
     bool init(const std::string& font_path);
 
     // Хардкод: растеризует букву 'y' 20px, возвращает GL-текстуру 20×20
-    unsigned int rasterizeY();
+    unsigned int rasterize(const std::string& text);
 
 private:
     FontManager() = default;

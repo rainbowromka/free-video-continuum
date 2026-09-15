@@ -24,6 +24,7 @@ bool Text::createTextures() {
     bool was_dirty = dirty_;
 
     if (was_dirty) {
+
         glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
         glViewport(0, 0, width_, height_);
 
@@ -32,7 +33,7 @@ bool Text::createTextures() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Растеризуем 'y'
-        unsigned int y_tex = FontManager::instance().rasterizeY();
+        unsigned int y_tex = FontManager::instance().rasterize("Юла");
 
         if (y_tex) {
             // Рисуем квад с текстурой 'y' на весь FBO
