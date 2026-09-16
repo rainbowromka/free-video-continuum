@@ -32,47 +32,60 @@ bool Text::createTextures() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Растеризуем 'y'
-        unsigned int y_tex = FontManager::instance().rasterize("Юла");
-
-        if (y_tex) {
-            // Рисуем квад с текстурой 'y' на весь FBO
-            float vertices[] = {
-                -1.0f,  1.0f, 0.0f, 0.0f,
-                -1.0f, -1.0f, 0.0f, 1.0f,
-                 1.0f, -1.0f, 1.0f, 1.0f,
-                -1.0f,  1.0f, 0.0f, 0.0f,
-                 1.0f, -1.0f, 1.0f, 1.0f,
-                 1.0f,  1.0f, 1.0f, 0.0f,
-            };
-
-            glBindVertexArray(quad_vao_);
-            glBindBuffer(GL_ARRAY_BUFFER, quad_vbo_);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, y_tex);
-
-            // Используем text_program — он умножает на text_color
-            glUseProgram(Renderer::instance().textProgram());
-
-            int color_loc = glGetUniformLocation(Renderer::instance().textProgram(), "text_color");
-            glUniform3f(color_loc, text_r_ / 255.0f, text_g_ / 255.0f, text_b_ / 255.0f);
-
-            int tex_loc = glGetUniformLocation(Renderer::instance().textProgram(), "tex");
-            glUniform1i(tex_loc, 0);
-
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-            glBindVertexArray(0);
-
-            glDeleteTextures(1, &y_tex);
+        std::vector<RasterGlyph> glyphs = FontManager::instance().rasterize(content_);
+        for (const RasterGlyph& g : glyphs) {
+            if (g.texture) {
+                drawGlyph(g.texture, g.bearing_x, g.bearing_y, g.width, g.height);
+                glDeleteTextures(1, &g.texture);
+            }
         }
+        // RasterGlyph glyph = FontManager::instance().rasterize(content_);
+        // if (glyph.texture) {
+        //     drawGlyph(glyph.texture, glyph.bearing_x, glyph.bearing_y, glyph.width, glyph.height);
+        // }
+
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     dirty_ = false;
     return was_dirty;
+}
+
+void Text::drawGlyph(unsigned int tex,  int bearing_x, int bearing_y, int width, int height) {
+    float scale = float(width_) / 2.0f;
+    float x1 = float(bearing_x) / scale - 1.0f;
+    float x2 = float(bearing_x + width) / scale - 1.0f;
+    float y1 = float(baseLine + bearing_y - height) / scale - 1.0f;
+    float y2 = float(baseLine + bearing_y) / scale - 1.0f;
+
+    float vertices[] = {                
+        x1, y2, 0.0f, 0.0f,
+        x1, y1, 0.0f, 1.0f,
+        x2, y1, 1.0f, 1.0f,
+        x1, y2, 0.0f, 0.0f,
+        x2, y1, 1.0f, 1.0f,
+        x2, y2, 1.0f, 0.0f,
+    };
+
+    glBindVertexArray(quad_vao_);
+    glBindBuffer(GL_ARRAY_BUFFER, quad_vbo_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glUseProgram(Renderer::instance().textProgram());
+
+    int color_loc = glGetUniformLocation(Renderer::instance().textProgram(), "text_color");
+    glUniform3f(color_loc, text_r_ / 255.0f, text_g_ / 255.0f, text_b_ / 255.0f);
+
+    int tex_loc = glGetUniformLocation(Renderer::instance().textProgram(), "tex");
+    glUniform1i(tex_loc, 0);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    glDeleteTextures(1, &tex);
 }
 
 void Text::draw(int parent_w, int parent_h) {
@@ -97,7 +110,6 @@ void Text::draw(int parent_w, int parent_h) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_);
     glUseProgram(Renderer::instance().textureProgram());
-    glBindVertexArray(quad_vao_);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
 }

@@ -32,8 +32,7 @@ int main() {
                     .setRect(10,10, 200, 22)
                     .add<Text>([](Text& t){ t
                         .setContent("Медиа:")
-                        .setTextColor(0xff, 0xff, 0xff)
-                        // .setHeight(20)
+                        .setTextColor(0xff, 0xff, 0xff)                        
                     //     .setRect(1, 1, 100, 20)
                     //     .setContent("Медиа:")
                     //     .setTextColor(0xff, 0xff, 0xff)

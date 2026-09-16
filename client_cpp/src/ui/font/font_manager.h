@@ -2,8 +2,17 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
-
 #include <string>
+#include <vector>
+
+struct RasterGlyph {
+    unsigned int texture = 0;   // GL-текстура (GL_RED), 0 = ошибка
+    int bearing_x = 0;          // bitmap_left
+    int bearing_y = 0;          // bitmap_top (это и есть ascent)
+    int width = 0;              // bitmap.width
+    int height = 0;             // bitmap.rows
+    int advance = 0;            // advance.x >> 6
+};
 
 class FontManager {
 public:
@@ -12,7 +21,7 @@ public:
     bool init(const std::string& font_path);
 
     // Хардкод: растеризует букву 'y' 20px, возвращает GL-текстуру 20×20
-    unsigned int rasterize(const std::string& text);
+    std::vector<RasterGlyph> rasterize(const std::string& text);
 
 private:
     FontManager() = default;

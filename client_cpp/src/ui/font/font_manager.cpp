@@ -84,21 +84,24 @@ bool FontManager::init(const std::string& font_path) {
     return true;
 }
 
-unsigned int FontManager::rasterize(const std::string& text) {
+std::vector<RasterGlyph> FontManager::rasterize(const std::string& text) {
+    std::vector<RasterGlyph> result;
+
     if (text.empty()) {
-        return 0;
+        return result;
     }
 
-    // 1. Достаём первый кодпоинт
+    RasterGlyph g;
+
     size_t pos = 0;
     uint32_t codepoint = utf8DecodeFirst(text, pos);
 
-    // std::cout << "[Font] rasterize: text=\"" << text
-    //           << "\" first_cp=0x" << std::hex << codepoint << std::dec
-    //           << " bytes_used=" << pos << std::endl;
+    std::cout << "[Font] rasterize: text=\"" << text
+              << "\" first_cp=0x" << std::hex << codepoint << std::dec
+              << " bytes_used=" << pos << std::endl;
 
     if (codepoint == 0) {
-        return 0;
+        return result;
     }
 
     // 2. Ставим размер
@@ -111,13 +114,13 @@ unsigned int FontManager::rasterize(const std::string& text) {
     if (glyph_index == 0) {
         std::cerr << "[Font] No glyph for codepoint 0x"
                   << std::hex << codepoint << std::dec << std::endl;
-        return 0;
+        return result;
     }
 
     // 4. Грузим и рендерим
     if (FT_Load_Glyph(face_, glyph_index, FT_LOAD_RENDER) != 0) {
         std::cerr << "[Font] Failed to load/render glyph" << std::endl;
-        return 0;
+        return result;
     }
 
     FT_GlyphSlot slot = face_->glyph;
@@ -125,11 +128,21 @@ unsigned int FontManager::rasterize(const std::string& text) {
     int h = slot->bitmap.rows;
 
     std::cout << "[Font] bitmap w=" << w << " h=" << h
+              << " left=" << slot->bitmap_left
+              << " top=" << slot->bitmap_top
+              << " advance=" << (slot->advance.x >> 6)
               << " pitch=" << slot->bitmap.pitch
               << " pixel_mode=" << (int)slot->bitmap.pixel_mode << std::endl;
 
+    g.bearing_x = slot->bitmap_left;
+    g.bearing_y = slot->bitmap_top;
+    g.width     = w;
+    g.height    = h;
+    g.advance   = static_cast<int>(slot->advance.x >> 6);
+
     if (w == 0 || h == 0) {
-        return 0;
+        result.push_back(g);
+        return result;
     }
 
     // 5. Выравнивание строк по 1 байту
@@ -151,5 +164,7 @@ unsigned int FontManager::rasterize(const std::string& text) {
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    return tex;
+    g.texture = tex;
+    result.push_back(g);
+    return result;
 }

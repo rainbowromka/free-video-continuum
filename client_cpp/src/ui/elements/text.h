@@ -19,5 +19,7 @@ public:
 
 protected:
     std::string content_;
+    unsigned int baseLine = 2;
     uint8_t text_r_ = 0xff, text_g_ = 0xff, text_b_ = 0xff;
+    void drawGlyph(unsigned int tex, int ascent, int bearing_x, int width, int height);
 };
