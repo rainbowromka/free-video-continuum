@@ -20,8 +20,9 @@ public:
 
     bool init(const std::string& font_path);
 
-    // Хардкод: растеризует букву 'y' 20px, возвращает GL-текстуру 20×20
-    std::vector<RasterGlyph> rasterize(const std::string& text);
+    std::vector<RasterGlyph> rasterize(const std::string& text, unsigned int size);
+    int measureText(const std::string& text, int size);
+    int descender(int size);
 
 private:
     FontManager() = default;

@@ -4,8 +4,11 @@
 #include <glad/gl.h>
 #include <iostream>
 
-Text& Text::setContent(const std::string& content) {
+Text& Text::setContent(unsigned int size, const std::string& content) {
     content_ = content;
+    height_ = size;
+    width_ = FontManager::instance().measureText(content_, height_);
+    baseLine = FontManager::instance().descender(height_);
     dirty_ = true;
     return *this;
 }
@@ -32,18 +35,14 @@ bool Text::createTextures() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        std::vector<RasterGlyph> glyphs = FontManager::instance().rasterize(content_);
+        std::vector<RasterGlyph> glyphs = FontManager::instance().rasterize(content_, height_);
+        int pen_x = 0;
         for (const RasterGlyph& g : glyphs) {
             if (g.texture) {
-                drawGlyph(g.texture, g.bearing_x, g.bearing_y, g.width, g.height);
-                glDeleteTextures(1, &g.texture);
+                drawGlyph(g, pen_x);
+                pen_x += g.advance;                
             }
         }
-        // RasterGlyph glyph = FontManager::instance().rasterize(content_);
-        // if (glyph.texture) {
-        //     drawGlyph(glyph.texture, glyph.bearing_x, glyph.bearing_y, glyph.width, glyph.height);
-        // }
-
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
@@ -52,12 +51,17 @@ bool Text::createTextures() {
     return was_dirty;
 }
 
-void Text::drawGlyph(unsigned int tex,  int bearing_x, int bearing_y, int width, int height) {
-    float scale = float(width_) / 2.0f;
-    float x1 = float(bearing_x) / scale - 1.0f;
-    float x2 = float(bearing_x + width) / scale - 1.0f;
-    float y1 = float(baseLine + bearing_y - height) / scale - 1.0f;
-    float y2 = float(baseLine + bearing_y) / scale - 1.0f;
+// void Text::drawGlyph(unsigned int tex,  int start_x, int start_y, int width, int height) {
+void Text::drawGlyph(const RasterGlyph& g, int pen_x) {
+    int start_x = pen_x + g.bearing_x;
+    int top_y = g.bearing_y - baseLine;
+
+    float scale_x = float(width_) / 2.0f;
+    float scale_y = float(height_) / 2.0f;
+    float x1 = float(start_x) / scale_x - 1.0f;
+    float x2 = float(start_x + g.width) / scale_x - 1.0f;
+    float y1 = float(top_y - g.height) / scale_y - 1.0f;
+    float y2 = float(top_y) / scale_y - 1.0f;
 
     float vertices[] = {                
         x1, y2, 0.0f, 0.0f,
@@ -73,7 +77,7 @@ void Text::drawGlyph(unsigned int tex,  int bearing_x, int bearing_y, int width,
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D, g.texture);
 
     glUseProgram(Renderer::instance().textProgram());
 
@@ -85,7 +89,7 @@ void Text::drawGlyph(unsigned int tex,  int bearing_x, int bearing_y, int width,
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
-    glDeleteTextures(1, &tex);
+    glDeleteTextures(1, &g.texture);
 }
 
 void Text::draw(int parent_w, int parent_h) {

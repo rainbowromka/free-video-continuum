@@ -84,87 +84,118 @@ bool FontManager::init(const std::string& font_path) {
     return true;
 }
 
-std::vector<RasterGlyph> FontManager::rasterize(const std::string& text) {
+std::vector<RasterGlyph> FontManager::rasterize(const std::string& text, unsigned int size) {
     std::vector<RasterGlyph> result;
 
     if (text.empty()) {
         return result;
     }
 
-    RasterGlyph g;
-
-    size_t pos = 0;
-    uint32_t codepoint = utf8DecodeFirst(text, pos);
-
-    std::cout << "[Font] rasterize: text=\"" << text
-              << "\" first_cp=0x" << std::hex << codepoint << std::dec
-              << " bytes_used=" << pos << std::endl;
-
-    if (codepoint == 0) {
-        return result;
-    }
-
-    // 2. Ставим размер
-    FT_Set_Pixel_Sizes(face_, 0, 20);
-
-    // 3. Проверяем, что глиф вообще есть в шрифте
-    FT_UInt glyph_index = FT_Get_Char_Index(face_, codepoint);
-    std::cout << "[Font] glyph_index=" << glyph_index << std::endl;
-
-    if (glyph_index == 0) {
-        std::cerr << "[Font] No glyph for codepoint 0x"
-                  << std::hex << codepoint << std::dec << std::endl;
-        return result;
-    }
-
-    // 4. Грузим и рендерим
-    if (FT_Load_Glyph(face_, glyph_index, FT_LOAD_RENDER) != 0) {
-        std::cerr << "[Font] Failed to load/render glyph" << std::endl;
-        return result;
-    }
-
-    FT_GlyphSlot slot = face_->glyph;
-    int w = slot->bitmap.width;
-    int h = slot->bitmap.rows;
-
-    std::cout << "[Font] bitmap w=" << w << " h=" << h
-              << " left=" << slot->bitmap_left
-              << " top=" << slot->bitmap_top
-              << " advance=" << (slot->advance.x >> 6)
-              << " pitch=" << slot->bitmap.pitch
-              << " pixel_mode=" << (int)slot->bitmap.pixel_mode << std::endl;
-
-    g.bearing_x = slot->bitmap_left;
-    g.bearing_y = slot->bitmap_top;
-    g.width     = w;
-    g.height    = h;
-    g.advance   = static_cast<int>(slot->advance.x >> 6);
-
-    if (w == 0 || h == 0) {
-        result.push_back(g);
-        return result;
-    }
-
-    // 5. Выравнивание строк по 1 байту
+    // Размер задаётся один раз для всей строки
+    FT_Set_Pixel_Sizes(face_, 0, size);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    // 6. Создаём текстуру ровно w×h (без фиксированной канвы)
-    unsigned int tex = 0;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    size_t pos = 0;
+    while (pos < text.size()) {
+        uint32_t codepoint = utf8DecodeFirst(text, pos);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
-                 w, h, 0,
-                 GL_RED, GL_UNSIGNED_BYTE, slot->bitmap.buffer);
+            if (codepoint == 0) {
+                continue;   // некорректный байт — пропускаем
+            }
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        FT_UInt glyph_index = FT_Get_Char_Index(face_, codepoint);
+        if (glyph_index == 0) {
+            std::cerr << "[Font] No glyph for codepoint 0x"
+                    << std::hex << codepoint << std::dec << std::endl;
+            continue;
+        }
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+        if (FT_Load_Glyph(face_, glyph_index, FT_LOAD_RENDER) != 0) {
+            std::cerr << "[Font] Failed to load/render glyph 0x"
+                      << std::hex << codepoint << std::dec << std::endl;
+            continue;
+        }
 
-    g.texture = tex;
-    result.push_back(g);
+        FT_GlyphSlot slot = face_->glyph;
+        int w = slot->bitmap.width;
+        int h = slot->bitmap.rows;
+
+        RasterGlyph g;
+        g.bearing_x = slot->bitmap_left;
+        g.bearing_y = slot->bitmap_top;
+        g.width     = w;
+        g.height    = h;
+        g.advance   = static_cast<int>(slot->advance.x >> 6);
+
+        // std::cout << "[Font] cp=0x" << std::hex << codepoint << std::dec
+        //           << " w=" << w << " h=" << h
+        //           << " left=" << g.bearing_x
+        //           << " top=" << g.bearing_y
+        //           << " advance=" << g.advance
+        //           << " pitch=" << slot->bitmap.pitch
+        //           << " pixel_mode=" << (int)slot->bitmap.pixel_mode << std::endl;
+
+        if (w == 0 || h == 0) {
+            result.push_back(g);
+            continue;
+        }
+
+        unsigned int tex = 0;
+        glGenTextures(1, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
+                    w, h, 0,
+                    GL_RED, GL_UNSIGNED_BYTE, slot->bitmap.buffer);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        g.texture = tex;
+        result.push_back(g);
+    }
+
     return result;
+}
+
+int FontManager::measureText(const std::string& text, int size) {
+    if (text.empty()) {
+        return 0;
+    }
+
+    FT_Set_Pixel_Sizes(face_, 0, size);
+
+    int total = 0;
+    size_t pos = 0;
+    while (pos < text.size()) {
+        uint32_t codepoint = utf8DecodeFirst(text, pos);
+        if (codepoint == 0) {
+            continue;
+        }
+
+        FT_UInt glyph_index = FT_Get_Char_Index(face_, codepoint);
+        if (glyph_index == 0) {
+            continue;
+        }
+
+        if (FT_Load_Glyph(face_, glyph_index, FT_LOAD_DEFAULT) != 0) {
+            continue;
+        }
+
+        total += static_cast<int>(face_->glyph->advance.x >> 6);
+    }
+
+    return total;
+}
+
+int FontManager::descender(int size) {
+    if (!face_) {
+        return 0;
+    }
+    FT_Set_Pixel_Sizes(face_, 0, size);
+    return int(face_->size->metrics.descender >> 6);
 }

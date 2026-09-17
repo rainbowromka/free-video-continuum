@@ -31,7 +31,7 @@ int main() {
                 .add<Rect>([](Rect& r){ r
                     .setRect(10,10, 200, 22)
                     .add<Text>([](Text& t){ t
-                        .setContent("Медиа:")
+                        .setContent(20, "Медиа:")
                         .setTextColor(0xff, 0xff, 0xff)                        
                     //     .setRect(1, 1, 100, 20)
                     //     .setContent("Медиа:")
