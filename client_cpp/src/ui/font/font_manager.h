@@ -4,6 +4,9 @@
 #include FT_FREETYPE_H
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <cstdint>
+
 
 struct RasterGlyph {
     unsigned int texture = 0;   // GL-текстура (GL_RED), 0 = ошибка
@@ -14,15 +17,20 @@ struct RasterGlyph {
     int advance = 0;            // advance.x >> 6
 };
 
+struct FontAtlas {
+    unsigned int texture = 0;                        
+    std::unordered_map<uint32_t, RasterGlyph> glyphs;
+};
+
 class FontManager {
 public:
     static FontManager& instance();
 
     bool init(const std::string& font_path);
-
-    std::vector<RasterGlyph> rasterize(const std::string& text, unsigned int size);
+    
+    std::vector<std::reference_wrapper<RasterGlyph>> getGlyphs(const std::string& text, unsigned int size);
     int measureText(const std::string& text, int size);
-    int descender(int size);
+    int max_height(int size);
 
 private:
     FontManager() = default;
@@ -32,4 +40,9 @@ private:
 
     FT_Library library_ = nullptr;
     FT_Face face_ = nullptr;
+
+    std::unordered_map<int, FontAtlas> atlases_; 
+
+    FontAtlas& getAtlas(unsigned int size);
+    RasterGlyph& getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigned int size);
 };

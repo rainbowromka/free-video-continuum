@@ -8,7 +8,7 @@ Text& Text::setContent(unsigned int size, const std::string& content) {
     content_ = content;
     height_ = size;
     width_ = FontManager::instance().measureText(content_, height_);
-    baseLine = FontManager::instance().descender(height_);
+    baseLine = (height_ - FontManager::instance().max_height(height_)) / 2;
     dirty_ = true;
     return *this;
 }
@@ -35,15 +35,15 @@ bool Text::createTextures() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        std::vector<RasterGlyph> glyphs = FontManager::instance().rasterize(content_, height_);
+        std::vector<std::reference_wrapper<RasterGlyph>> glyphs = FontManager::instance().getGlyphs(content_, height_);
         int pen_x = 0;
-        for (const RasterGlyph& g : glyphs) {
+        for (auto ref : glyphs) {
+            RasterGlyph& g = ref.get();
             if (g.texture) {
                 drawGlyph(g, pen_x);
-                pen_x += g.advance;                
             }
+            pen_x += g.advance;
         }
-
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
@@ -89,7 +89,6 @@ void Text::drawGlyph(const RasterGlyph& g, int pen_x) {
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
-    glDeleteTextures(1, &g.texture);
 }
 
 void Text::draw(int parent_w, int parent_h) {

@@ -2,6 +2,7 @@
 #include <glad/gl.h>
 #include <iostream>
 #include <vector>
+#include <functional>
 
 namespace {
     // Читает один Unicode-кодпоинт из UTF-8 строки, начиная с pos.
@@ -84,12 +85,17 @@ bool FontManager::init(const std::string& font_path) {
     return true;
 }
 
-std::vector<RasterGlyph> FontManager::rasterize(const std::string& text, unsigned int size) {
-    std::vector<RasterGlyph> result;
+std::vector<std::reference_wrapper<RasterGlyph>> FontManager::getGlyphs(
+    const std::string& text,
+     unsigned int size)
+{
+    std::vector<std::reference_wrapper<RasterGlyph>> result;
 
     if (text.empty()) {
-        return result;
+        return result;        
     }
+
+    FontAtlas& atlas = getAtlas(size);
 
     // Размер задаётся один раз для всей строки
     FT_Set_Pixel_Sizes(face_, 0, size);
@@ -99,9 +105,9 @@ std::vector<RasterGlyph> FontManager::rasterize(const std::string& text, unsigne
     while (pos < text.size()) {
         uint32_t codepoint = utf8DecodeFirst(text, pos);
 
-            if (codepoint == 0) {
-                continue;   // некорректный байт — пропускаем
-            }
+        if (codepoint == 0) {
+            continue;   // некорректный байт — пропускаем
+        }
 
         FT_UInt glyph_index = FT_Get_Char_Index(face_, codepoint);
         if (glyph_index == 0) {
@@ -112,50 +118,11 @@ std::vector<RasterGlyph> FontManager::rasterize(const std::string& text, unsigne
 
         if (FT_Load_Glyph(face_, glyph_index, FT_LOAD_RENDER) != 0) {
             std::cerr << "[Font] Failed to load/render glyph 0x"
-                      << std::hex << codepoint << std::dec << std::endl;
+                    << std::hex << codepoint << std::dec << std::endl;
             continue;
         }
 
-        FT_GlyphSlot slot = face_->glyph;
-        int w = slot->bitmap.width;
-        int h = slot->bitmap.rows;
-
-        RasterGlyph g;
-        g.bearing_x = slot->bitmap_left;
-        g.bearing_y = slot->bitmap_top;
-        g.width     = w;
-        g.height    = h;
-        g.advance   = static_cast<int>(slot->advance.x >> 6);
-
-        // std::cout << "[Font] cp=0x" << std::hex << codepoint << std::dec
-        //           << " w=" << w << " h=" << h
-        //           << " left=" << g.bearing_x
-        //           << " top=" << g.bearing_y
-        //           << " advance=" << g.advance
-        //           << " pitch=" << slot->bitmap.pitch
-        //           << " pixel_mode=" << (int)slot->bitmap.pixel_mode << std::endl;
-
-        if (w == 0 || h == 0) {
-            result.push_back(g);
-            continue;
-        }
-
-        unsigned int tex = 0;
-        glGenTextures(1, &tex);
-        glBindTexture(GL_TEXTURE_2D, tex);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
-                    w, h, 0,
-                    GL_RED, GL_UNSIGNED_BYTE, slot->bitmap.buffer);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        g.texture = tex;
+        RasterGlyph& g = getGlyph(atlas, codepoint, size);
         result.push_back(g);
     }
 
@@ -192,10 +159,87 @@ int FontManager::measureText(const std::string& text, int size) {
     return total;
 }
 
-int FontManager::descender(int size) {
+int FontManager::max_height(int size) {
     if (!face_) {
         return 0;
     }
     FT_Set_Pixel_Sizes(face_, 0, size);
-    return int(face_->size->metrics.descender >> 6);
+
+    int asc = face_->size->metrics.ascender>>6;
+    int desc = face_->size->metrics.descender>>6;
+
+
+    return int(asc-desc);
+}
+
+FontAtlas& FontManager::getAtlas(unsigned int size) {    
+    FontAtlas& atlas = atlases_[size];
+
+    if (atlas.texture == 0) {
+        glGenTextures(1, &atlas.texture);
+        glBindTexture(GL_TEXTURE_2D, atlas.texture);
+
+        const int ATLAS_W = 1024;
+        const int ATLAS_H = 1024;
+        std::vector<uint8_t> empty(ATLAS_W * ATLAS_H, 0);
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
+                     ATLAS_W, ATLAS_H, 0,
+                     GL_RED, GL_UNSIGNED_BYTE, empty.data());
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        std::cout << "[Font] Created atlas for size " << size
+                  << " texture=" << atlas.texture << std::endl;
+    }
+
+    return atlas;
+}
+
+RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigned int size)                        
+{
+    auto it = atlas.glyphs.find(codepoint);
+    if (it != atlas.glyphs.end()) {
+        return it->second;
+    }
+
+    RasterGlyph& g = atlas.glyphs[codepoint];
+
+    FT_GlyphSlot slot = face_->glyph;
+    int w = slot->bitmap.width;
+    int h = slot->bitmap.rows;
+
+    g.bearing_x = slot->bitmap_left;
+    g.bearing_y = slot->bitmap_top;
+    g.width     = w;
+    g.height    = h;
+    g.advance   = static_cast<int>(slot->advance.x >> 6);
+
+    if (w == 0 || h == 0) {
+        return g;
+    }
+
+    unsigned int tex = 0;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0,
+                 GL_RED, GL_UNSIGNED_BYTE, slot->bitmap.buffer);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    g.texture = tex;
+
+    return g;
 }
