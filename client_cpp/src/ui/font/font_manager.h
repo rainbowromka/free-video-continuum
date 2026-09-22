@@ -15,9 +15,19 @@ struct RasterGlyph {
     int width = 0;              // bitmap.width
     int height = 0;             // bitmap.rows
     int advance = 0;            // advance.x >> 6
+
+    float u0 = 0.0,
+        v0 = 0.0,
+        u1 = 0.0,
+        v1 = 0.0; // координаты текстуры в атласе.
 };
 
 struct FontAtlas {
+    int cursor_x = 0;           // точка нового глифа в атласе
+    int cursor_y = 0;           // точка нового глифа в атласе
+    int width = 1024;           // размер атласа
+    int height = 1024;          // размер атласа
+    int row_height = 0;         // размер глифа по высоте
     unsigned int texture = 0;                        
     std::unordered_map<uint32_t, RasterGlyph> glyphs;
 };

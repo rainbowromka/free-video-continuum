@@ -225,21 +225,41 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
         return g;
     }
 
-    unsigned int tex = 0;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    if (atlas.cursor_x + w > atlas.width) {
+        atlas.cursor_x = 0;
+        atlas.cursor_y += atlas.row_height;
+        atlas.row_height = 0;
+    }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0,
-                 GL_RED, GL_UNSIGNED_BYTE, slot->bitmap.buffer);
+    if (atlas.cursor_y + h > atlas.height) {
+        std::cerr << "[Font] Atlas overflow for size " << size << std::endl;
+        return g;
+    }
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    int last_x = atlas.cursor_x;
+    int last_y = atlas.cursor_y;
+
+    g.u0 = float(last_x)     / float(atlas.width);
+    g.v0 = float(last_y)     / float(atlas.height);
+    g.u1 = float(last_x + w) / float(atlas.width);
+    g.v1 = float(last_y + h) / float(atlas.height);
+
+    glBindTexture(GL_TEXTURE_2D, atlas.texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexSubImage2D(GL_TEXTURE_2D, 0,
+                    last_x, last_y,
+                    w, h,
+                    GL_RED, GL_UNSIGNED_BYTE,
+                    slot->bitmap.buffer);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    g.texture = tex;
+    atlas.cursor_x += w;
+    if (h > atlas.row_height) {
+        atlas.row_height = h;
+    }
+
+    g.texture = atlas.texture;
 
     return g;
 }

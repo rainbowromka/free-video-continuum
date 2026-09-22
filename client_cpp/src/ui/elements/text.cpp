@@ -64,12 +64,12 @@ void Text::drawGlyph(const RasterGlyph& g, int pen_x) {
     float y2 = float(top_y) / scale_y - 1.0f;
 
     float vertices[] = {                
-        x1, y2, 0.0f, 0.0f,
-        x1, y1, 0.0f, 1.0f,
-        x2, y1, 1.0f, 1.0f,
-        x1, y2, 0.0f, 0.0f,
-        x2, y1, 1.0f, 1.0f,
-        x2, y2, 1.0f, 0.0f,
+        x1, y2, g.u0, g.v0,
+        x1, y1, g.u0, g.v1,
+        x2, y1, g.u1, g.v1,
+        x1, y2, g.u0, g.v0,
+        x2, y1, g.u1, g.v1,
+        x2, y2, g.u1, g.v0,
     };
 
     glBindVertexArray(quad_vao_);
