@@ -46,6 +46,29 @@ void main() {
 }
 )";
 
+static const char* TEXT_VS = R"(
+#version 330 core
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec2 texcoord;
+out vec2 v_texcoord;
+void main() {
+    gl_Position = vec4(position, 0.0, 1.0);
+    v_texcoord = texcoord;
+}
+)";
+
+static const char* TEXT_FS = R"(
+#version 330 core
+uniform sampler2D tex;
+uniform vec3 text_color;
+in vec2 v_texcoord;
+out vec4 FragColor;
+void main() {
+    float a = texture(tex, v_texcoord).r;
+    FragColor = vec4(text_color * a, 1.0);
+}
+)";
+
 bool Renderer::init() {    
     return initPrograms();
 }
@@ -100,5 +123,9 @@ bool Renderer::initPrograms() {
     unsigned int tex_fs = compileShader(GL_FRAGMENT_SHADER, TEX_FS);
     texture_program_ = linkProgram(tex_vs, tex_fs);
 
-    return rect_program_ != 0 && texture_program_ != 0;
+    unsigned int text_vs = compileShader(GL_VERTEX_SHADER, TEXT_VS);
+    unsigned int text_fs = compileShader(GL_FRAGMENT_SHADER, TEXT_FS);
+    text_program_ = linkProgram(text_vs, text_fs);
+
+    return rect_program_ != 0 && texture_program_ != 0 && text_program_ != 0;
 }

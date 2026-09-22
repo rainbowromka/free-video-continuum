@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "ui/render/renderer.h"
+#include "ui/font/font_manager.h"
 
 Window::Window() {}
 
@@ -38,6 +39,8 @@ void Window::run() {
     initGlfw();
     createWindow();
     initOpenGL();
+
+    FontManager::instance().init("assets/DejaVuSansMono.ttf");
 
     Renderer& renderer = Renderer::instance();
     if (!renderer.init()) {

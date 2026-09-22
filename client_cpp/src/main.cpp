@@ -2,6 +2,7 @@
 #include <ui/window.h>
 #include <ui/ui.h>
 #include <ui/elements/rect.h>
+#include <ui/elements/text.h>
 
 int main() {
     Window window;
@@ -29,12 +30,15 @@ int main() {
                 .setColor(0x27, 0x2a, 0x31)
                 .add<Rect>([](Rect& r){ r
                     .setRect(10,10, 200, 22)
-                    // .add::<Text>(|t| { t
-                    //     .set_content("Медиа:")
-                    //     .set_position(1, 1)
-                    //     .set_height(20)
-                    //     .set_text_color(0xff, 0xff, 0xff);
-                    // });
+                    .add<Text>([](Text& t){ t
+                        .setContent(20, "Медиа:")
+                        .setTextColor(0xff, 0xff, 0xff)                        
+                    //     .setRect(1, 1, 100, 20)
+                    //     .setContent("Медиа:")
+                    //     .setTextColor(0xff, 0xff, 0xff)
+                    //     .setFontSize(20)
+                         ;
+                    });
                 // })
                 // .add::<HBox>(|h|{h
                 //     .set_rect(10,36, 370, 22)
