@@ -209,12 +209,13 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
         return it->second;
     }
 
-    RasterGlyph& g = atlas.glyphs[codepoint];
+    // RasterGlyph& g = atlas.glyphs[codepoint];
 
     FT_GlyphSlot slot = face_->glyph;
     int w = slot->bitmap.width;
     int h = slot->bitmap.rows;
 
+    RasterGlyph g;
     g.bearing_x = slot->bitmap_left;
     g.bearing_y = slot->bitmap_top;
     g.width     = w;
@@ -222,7 +223,8 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
     g.advance   = static_cast<int>(slot->advance.x >> 6);
 
     if (w == 0 || h == 0) {
-        return g;
+        atlas.glyphs[codepoint] = g;
+        return atlas.glyphs[codepoint];
     }
 
     if (atlas.cursor_x + w > atlas.width) {
@@ -232,9 +234,18 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
     }
 
     if (atlas.cursor_y + h > atlas.height) {
-        std::cerr << "[Font] Atlas overflow for size " << size << std::endl;
-        return g;
+        growAtlas(atlas, size);
+        // после пересоздания cursor_x = 0, cursor_y = 0, row_height = 0
+        // и проверка по X тоже может сработать заново
+        if (atlas.cursor_x + w > atlas.width) {
+            atlas.cursor_x = 0;
+            atlas.cursor_y += atlas.row_height;
+            atlas.row_height = 0;
+        }        
     }
+
+    // atlas.glyphs[codepoint] = g;
+    // RasterGlyph& g = atlas.glyphs[codepoint];
 
     int last_x = atlas.cursor_x;
     int last_y = atlas.cursor_y;
@@ -261,5 +272,30 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
 
     g.texture = atlas.texture;
 
-    return g;
+    atlas.glyphs[codepoint] = g;
+    return atlas.glyphs[codepoint];
+}
+
+
+void FontManager::shutdown() {
+    // 1. Удаляем GL-текстуры атласов
+    for (auto& [size, atlas] : atlases_) {
+        if (atlas.texture != 0) {
+            glDeleteTextures(1, &atlas.texture);
+            atlas.texture = 0;
+        }
+    }
+    atlases_.clear();
+
+    // 2. Освобождаем FreeType
+    if (face_) {
+        FT_Done_Face(face_);
+        face_ = nullptr;
+    }
+    if (library_) {
+        FT_Done_FreeType(library_);
+        library_ = nullptr;
+    }
+
+    std::cout << "[Font] Shutdown complete" << std::endl;
 }

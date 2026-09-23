@@ -41,6 +41,7 @@ public:
     std::vector<std::reference_wrapper<RasterGlyph>> getGlyphs(const std::string& text, unsigned int size);
     int measureText(const std::string& text, int size);
     int max_height(int size);
+    void shutdown();
 
 private:
     FontManager() = default;
