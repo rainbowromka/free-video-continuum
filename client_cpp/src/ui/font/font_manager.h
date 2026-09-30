@@ -9,27 +9,22 @@
 
 
 struct RasterGlyph {
-    unsigned int texture = 0;   // GL-текстура (GL_RED), 0 = ошибка
-    int bearing_x = 0;          // bitmap_left
-    int bearing_y = 0;          // bitmap_top (это и есть ascent)
-    int width = 0;              // bitmap.width
-    int height = 0;             // bitmap.rows
-    int advance = 0;            // advance.x >> 6
-
-    float u0 = 0.0,
-        v0 = 0.0,
-        u1 = 0.0,
-        v1 = 0.0; // координаты текстуры в атласе.
+    unsigned int texture = 0;
+    int bearing_x = 0;
+    int bearing_y = 0;
+    int width = 0;
+    int height = 0;
+    int advance = 0;
+    float u0 = 0.0f, v0 = 0.0f, u1 = 0.0f, v1 = 0.0f;
 };
 
 struct FontAtlas {
+    unsigned int texture = 0;                        
+    int width = 0;
+    int height = 0;
     int cursor_x = 0;           // точка нового глифа в атласе
     int cursor_y = 0;           // точка нового глифа в атласе
-    int width = 1024;           // размер атласа
-    int height = 1024;          // размер атласа
     int row_height = 0;         // размер глифа по высоте
-    unsigned int texture = 0;                        
-    std::unordered_map<uint32_t, RasterGlyph> glyphs;
 };
 
 class FontManager {
@@ -52,8 +47,17 @@ private:
     FT_Library library_ = nullptr;
     FT_Face face_ = nullptr;
 
-    std::unordered_map<int, FontAtlas> atlases_; 
+    std::unordered_map<uint64_t, RasterGlyph> glyphs_;
+    std::unordered_map<int, FontAtlas> active_atlases_;
+    std::vector<unsigned int> atlas_textures_;    
 
+    void createAtlas(FontAtlas& atlas, unsigned int size);
     FontAtlas& getAtlas(unsigned int size);
-    RasterGlyph& getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigned int size);
+    
+    // ВНИМАНИЕ: getGlyph вызывается ТОЛЬКО после того,
+    // как снаружи (в getGlyphs) подтверждено:
+    //   FT_Get_Char_Index(face_, codepoint) != 0 
+    //   FT_Load_Glyph(face_, glyph_index, FT_LOAD_RENDER) == 0
+    // Внутри getGlyph ошибки НЕ обрабатываются.
+    RasterGlyph& getGlyph(uint32_t codepoint, unsigned int size);
 };

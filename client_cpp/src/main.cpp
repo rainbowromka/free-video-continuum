@@ -18,9 +18,11 @@ int main() {
                 .setRect(0, 0, 390, h)
                 .setColor(0x27, 0x2a, 0x31)
                 .add<Rect>([](Rect& r){ r
-                    .setRect(10,10, 200, 22)
+                    // .setRect(10,10, 200, 22)
+                    .setRect(10,10, 200, 50)
                     .add<Text>([](Text& t){ t
-                        .setContent(20, "Медиа:")
+                        // .setContent(20, "Медиа:")
+                        .setContent(48, "Медиа:")
                         .setTextColor(0xff, 0xff, 0xff);
                     });
                 });
