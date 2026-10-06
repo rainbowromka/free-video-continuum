@@ -3,6 +3,7 @@
 #include <ui/ui.h>
 #include <ui/elements/rect.h>
 #include <ui/elements/text.h>
+#include <ui/elements/hbox.h>
 
 int main() {
     Window window;
@@ -18,38 +19,36 @@ int main() {
                 .setRect(0, 0, 390, h)
                 .setColor(0x27, 0x2a, 0x31)
                 .add<Rect>([](Rect& r){ r
-                    // .setRect(10,10, 200, 22)
-                    .setRect(10,10, 200, 50)
+                    .setRect(10,10, 200, 22)
                     .add<Text>([](Text& t){ t
-                        // .setContent(20, "Медиа:")
-                        .setContent(48, "Медиа:")
+                        .setContent(21, "Медиа:")
                         .setTextColor(0xff, 0xff, 0xff);
                     });
-                });
-                // .add<HBox>([](Rect& r){ h
-                    // .setRect(10,36, 370, 22)
-                    // .setColor(0x17, 0x1a, 0x21)
-                    //     .add::<Button>(|b|{b
+                })
+                .add<HBox>([](HBox& h){ h
+                    .setRect(10,36, 370, 22)
+                    .setColor(0x17, 0x1a, 0x21)
+                        // .add::<Button>(|b|{b
                     //         .add::<Text>(|t| {t
                     //             .set_content("[d]Mamay")
                     //             .set_height(16)
                     //             .set_text_color(0xff, 0xff, 0xff);
                     //         });
                     //     })
-                    //     .add::<Text>(|t| { t
-                    //         .set_content("[r]MyVideo")
-                    //         .set_height(16)
-                    //         .set_text_color(0xef, 0xef, 0xef)
-                    //         .set_color(0x17, 0x1a, 0x21)
-                    //     })
+                    .add<Text>([](Text& t) { t
+                        .setContent(16, "[r]MyVideo")
+                        .setTextColor(0xef, 0xef, 0xef)
+                        // .set_color(0x17, 0x1a, 0x21)
+                        ;
+                    })
                     //     .add::<Text>(|t| { t
                     //         .set_content("[e]Новый год")
                     //         .set_height(16)
                     //         .set_text_color(0xef, 0xef, 0xef)
                     //         .set_color(0x17, 0x1a, 0x21)
                     //     });
-                    // ;
-                // });
+                    ;
+                });
             })
             .add<Rect>([w, h](Rect& r) { r
                 .setRect(w - 300, 0, 300, h)

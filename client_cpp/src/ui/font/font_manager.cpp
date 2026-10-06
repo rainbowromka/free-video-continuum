@@ -166,6 +166,36 @@ int FontManager::max_height(int size) {
     return int(asc-desc);
 }
 
+int FontManager::getSize(int height) {
+    auto it = sizeForHeightCache_.find(height);
+    if (it != sizeForHeightCache_.end()) {
+        return it->second;
+    }
+
+    int result = 1;
+    for (int size = 1; size <= 200; ++size) {
+        FT_Set_Pixel_Sizes(face_, 0, size);
+        int h = int(face_->size->metrics.ascender  >> 6)
+              - int(face_->size->metrics.descender >> 6);
+        if (h >= height) {
+            result = size;
+            break;
+        }
+    }
+
+    if (result == 200) {
+        std::cout << "[Font] size for height " << height << " not found, using max" << std::endl;
+    }
+
+    sizeForHeightCache_[height] = result;
+    return result;
+}
+
+int FontManager::descender(int size) {
+    FT_Set_Pixel_Sizes(face_, 0, size);
+    return face_->size->metrics.descender>>6;
+}
+
 void FontManager::createAtlas(FontAtlas& atlas, unsigned int size) {
     int cell = max_height(size);
 

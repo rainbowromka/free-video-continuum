@@ -4,11 +4,12 @@
 #include <glad/gl.h>
 #include <iostream>
 
-Text& Text::setContent(unsigned int size, const std::string& content) {
+Text& Text::setContent(unsigned int height, const std::string& content) {
     content_ = content;
-    height_ = size;
-    width_ = FontManager::instance().measureText(content_, height_);
-    baseLine = (height_ - FontManager::instance().max_height(height_)) / 2;
+    height_ = height;
+    size_ = FontManager::instance().getSize(height);
+    width_ = FontManager::instance().measureText(content_, size_);
+    baseLine = -FontManager::instance().descender(size_);
     dirty_ = true;
     return *this;
 }
@@ -35,7 +36,7 @@ bool Text::createTextures() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        std::vector<std::reference_wrapper<RasterGlyph>> glyphs = FontManager::instance().getGlyphs(content_, height_);
+        std::vector<std::reference_wrapper<RasterGlyph>> glyphs = FontManager::instance().getGlyphs(content_, size_);
         int pen_x = 0;
         for (auto ref : glyphs) {
             RasterGlyph& g = ref.get();
@@ -54,7 +55,7 @@ bool Text::createTextures() {
 // void Text::drawGlyph(unsigned int tex,  int start_x, int start_y, int width, int height) {
 void Text::drawGlyph(const RasterGlyph& g, int pen_x) {
     int start_x = pen_x + g.bearing_x;
-    int top_y = g.bearing_y - baseLine;
+    int top_y = g.bearing_y + baseLine;
 
     float scale_x = float(width_) / 2.0f;
     float scale_y = float(height_) / 2.0f;

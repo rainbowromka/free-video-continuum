@@ -12,7 +12,7 @@ public:
     }
     ~Text() = default;
 
-    Text& setContent(unsigned int size, const std::string& content);
+    Text& setContent(unsigned int height, const std::string& content);
     Text& setTextColor(uint8_t r, uint8_t g, uint8_t b);
 
     bool createTextures() override;
@@ -21,6 +21,7 @@ public:
 protected:
     std::string content_;
     int baseLine = 2;
+    int size_ = 0;
     uint8_t text_r_ = 0xff, text_g_ = 0xff, text_b_ = 0xff;
     void drawGlyph(const RasterGlyph& g, int pen_x);
 };

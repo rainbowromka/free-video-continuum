@@ -36,6 +36,8 @@ public:
     std::vector<std::reference_wrapper<RasterGlyph>> getGlyphs(const std::string& text, unsigned int size);
     int measureText(const std::string& text, int size);
     int max_height(int size);
+    int getSize(int height);
+    int descender(int size);
     void shutdown();
 
 private:
@@ -50,6 +52,7 @@ private:
     std::unordered_map<uint64_t, RasterGlyph> glyphs_;
     std::unordered_map<int, FontAtlas> active_atlases_;
     std::vector<unsigned int> atlas_textures_;    
+    std::unordered_map<int, int> sizeForHeightCache_;
 
     void createAtlas(FontAtlas& atlas, unsigned int size);
     FontAtlas& getAtlas(unsigned int size);

@@ -95,6 +95,10 @@ void Window::createWindow() {
     }
     glfwMakeContextCurrent(window_);
 
+    glfwSetFramebufferSizeCallback(window_, [](GLFWwindow*, int w, int h) {
+        glViewport(0, 0, w, h);
+    });
+
     glfwSetWindowSizeLimits(window_, width_, height_, GLFW_DONT_CARE, GLFW_DONT_CARE);
 }
 
