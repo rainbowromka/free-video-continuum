@@ -6,4 +6,5 @@ class HBox : public Rect {
 public:
     HBox() = default;
     ~HBox() = default;
+    void layout() override;
 };

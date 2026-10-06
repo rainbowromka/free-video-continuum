@@ -6,8 +6,8 @@
 
 Text& Text::setContent(unsigned int height, const std::string& content) {
     content_ = content;
-    height_ = height;
     size_ = FontManager::instance().getSize(height);
+    height_ = FontManager::instance().max_height(size_);
     width_ = FontManager::instance().measureText(content_, size_);
     baseLine = -FontManager::instance().descender(size_);
     dirty_ = true;

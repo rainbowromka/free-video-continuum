@@ -12,8 +12,4 @@ public:
 
     bool createTextures() override;
     void draw(int parent_w, int parent_h) override;
-
-protected:
-    int x_ = 0;
-    int y_ = 0;
 };

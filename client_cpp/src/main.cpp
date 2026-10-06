@@ -4,6 +4,7 @@
 #include <ui/elements/rect.h>
 #include <ui/elements/text.h>
 #include <ui/elements/hbox.h>
+#include <ui/elements/button.h>
 
 int main() {
     Window window;
@@ -28,25 +29,23 @@ int main() {
                 .add<HBox>([](HBox& h){ h
                     .setRect(10,36, 370, 22)
                     .setColor(0x17, 0x1a, 0x21)
-                        // .add::<Button>(|b|{b
-                    //         .add::<Text>(|t| {t
-                    //             .set_content("[d]Mamay")
-                    //             .set_height(16)
-                    //             .set_text_color(0xff, 0xff, 0xff);
-                    //         });
-                    //     })
-                    .add<Text>([](Text& t) { t
+                    .add<Button>([](Button& b) {b
+                        .add<Text>([](Text& t) {t
+                            .setContent(16, "[d]Mamay")                                
+                            .setTextColor(0xff, 0xff, 0xff);
+                        });
+                    })
+                    .add<Text>([](Text& t) {t
                         .setContent(16, "[r]MyVideo")
                         .setTextColor(0xef, 0xef, 0xef)
                         // .set_color(0x17, 0x1a, 0x21)
                         ;
                     })
-                    //     .add::<Text>(|t| { t
-                    //         .set_content("[e]Новый год")
-                    //         .set_height(16)
-                    //         .set_text_color(0xef, 0xef, 0xef)
+                    .add<Text>([](Text& t) { t
+                        .setContent(16, "[e]Новый год")
+                        .setTextColor(0xef, 0xef, 0xef);
                     //         .set_color(0x17, 0x1a, 0x21)
-                    //     });
+                    })
                     ;
                 });
             })

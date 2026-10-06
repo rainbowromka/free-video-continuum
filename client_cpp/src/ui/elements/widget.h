@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 
 class Widget {
 public:
@@ -15,6 +16,7 @@ public:
     virtual bool createTextures() { return false; }
     virtual void draw(int parent_w, int parent_h) { (void)parent_w; (void)parent_h; }
     virtual bool isDirty() const { return dirty_; }
+    virtual void layout() {}
 
     template<typename T, typename F>
     Widget& add(F configure) {
@@ -46,6 +48,7 @@ public:
         element->resetChildCount();
         configure(*element);
         element->truncChildren();
+        element->layout();
 
         return *this;
     }
@@ -59,6 +62,19 @@ public:
             dirty_ = true;
         }
     }
+
+    void setPosition(int x, int y) {
+        if (x_ != x || y_ != y) {
+            x_ = x;
+            y_ = y;
+            dirty_ = true;
+        }
+    }
+
+    int x() const { return x_; }
+    int y() const { return y_; }
+    int width() const { return width_; }
+    int height() const { return height_; }
 
 protected:
     int x_ = 0;

@@ -1,3 +1,4 @@
+#include <iostream>
 #include "ui/elements/rect.h"
 #include "ui/render/renderer.h"
 #include <glad/gl.h>
