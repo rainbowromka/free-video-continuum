@@ -54,6 +54,8 @@ void Window::run() {
     bool first_frame = true;
 
     while (!glfwWindowShouldClose(window_)) {
+        glfwPollEvents();
+
         int w, h;
         glfwGetFramebufferSize(window_, &w, &h);
 
@@ -62,7 +64,13 @@ void Window::run() {
             ui.resetChildCount();
             if (onDraw_) onDraw_(ui);
             ui.truncChildren();
+            ui.calcAbs(0, 0);
             first_frame = false;
+        }
+
+        if (mouse_moved_) {
+            ui.onMouseMove(mouse_x_, mouse_y_);
+            mouse_moved_ = false;
         }
 
         if (ui.isDirty()) {
@@ -70,8 +78,6 @@ void Window::run() {
             ui.render();
             glfwSwapBuffers(window_);
         }
-
-        glfwPollEvents();
     }
 }
 
@@ -100,6 +106,14 @@ void Window::createWindow() {
     });
 
     glfwSetWindowSizeLimits(window_, width_, height_, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
+    glfwSetWindowUserPointer(window_, this);
+    glfwSetCursorPosCallback(window_, [](GLFWwindow* win, double x, double y) {
+        Window* self = static_cast<Window*>(glfwGetWindowUserPointer(win));
+        self->mouse_x_ = int(x);
+        self->mouse_y_ = int(y);
+        self->mouse_moved_ = true;
+    });
 }
 
 void Window::initOpenGL() {

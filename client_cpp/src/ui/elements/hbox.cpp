@@ -3,9 +3,16 @@
 
 void HBox::layout() {
     int x = 0;
-    for (auto& child : children_) {
-        int y = (height() - child->height()) / 2;
-        child->setPosition(x, y);
-        x += child->width();
+    for (uint32_t id : children_) {
+        Widget* child = heap_->get(id);
+        if (!child) continue;
+        
+        // кастомные (defaultProp=false) пропускаются: координаты заданы пользователем,
+        // x не сдвигается — они не участвуют в потоке раскладки HBox        
+        if (child->defaultProp()){
+            int y = (height() - child->height()) / 2;
+            child->setPosition(x, y);
+            x += child->width();
+        }
     }
 }

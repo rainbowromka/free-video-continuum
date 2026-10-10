@@ -30,22 +30,25 @@ int main() {
                     .setRect(10,36, 370, 22)
                     .setColor(0x17, 0x1a, 0x21)
                     .add<Button>([](Button& b) {b
+                        // .setColor(0x37, 0x1a, 0x21) //<- убрать.
+                        // .setRect(0, 0, 50, 22)
                         .add<Text>([](Text& t) {t
                             .setContent(16, "[d]Mamay")                                
                             .setTextColor(0xff, 0xff, 0xff);
-                        });
-                    })
-                    .add<Text>([](Text& t) {t
-                        .setContent(16, "[r]MyVideo")
-                        .setTextColor(0xef, 0xef, 0xef)
-                        // .set_color(0x17, 0x1a, 0x21)
+                        })
                         ;
                     })
-                    .add<Text>([](Text& t) { t
-                        .setContent(16, "[e]Новый год")
-                        .setTextColor(0xef, 0xef, 0xef);
-                    //         .set_color(0x17, 0x1a, 0x21)
-                    })
+                    // .add<Text>([](Text& t) {t
+                    //     .setContent(16, "[r]MyVideo")
+                    //     .setTextColor(0xef, 0xef, 0xef)
+                    //     // .set_color(0x17, 0x1a, 0x21)
+                    //     ;
+                    // })
+                    // .add<Text>([](Text& t) { t
+                    //     .setContent(16, "[e]Новый год")
+                    //     .setTextColor(0xef, 0xef, 0xef);
+                    // //         .set_color(0x17, 0x1a, 0x21)
+                    // })
                     ;
                 });
             })

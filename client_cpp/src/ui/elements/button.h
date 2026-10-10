@@ -3,7 +3,7 @@
 
 class Button : public Rect {
 public:
-    Button() = default;
+    Button();
     ~Button() = default;
     void layout() override;
 };

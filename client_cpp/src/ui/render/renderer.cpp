@@ -65,11 +65,13 @@ in vec2 v_texcoord;
 out vec4 FragColor;
 void main() {
     float a = texture(tex, v_texcoord).r;
-    FragColor = vec4(text_color * a, 1.0);
+    FragColor = vec4(text_color * a, a);
 }
 )";
 
-bool Renderer::init() {    
+bool Renderer::init() {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     return initPrograms();
 }
 

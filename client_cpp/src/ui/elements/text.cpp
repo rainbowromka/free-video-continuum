@@ -10,7 +10,7 @@ Text& Text::setContent(unsigned int height, const std::string& content) {
     height_ = FontManager::instance().max_height(size_);
     width_ = FontManager::instance().measureText(content_, size_);
     baseLine = -FontManager::instance().descender(size_);
-    dirty_ = true;
+    markDirty();
     return *this;
 }
 
@@ -18,7 +18,7 @@ Text& Text::setTextColor(uint8_t r, uint8_t g, uint8_t b) {
     text_r_ = r;
     text_g_ = g;
     text_b_ = b;
-    dirty_ = true;
+    markDirty();
     return *this;
 }
 
@@ -33,7 +33,8 @@ bool Text::createTextures() {
         glViewport(0, 0, width_, height_);
 
         // Фон — чёрный
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   // ← альфа 0
         glClear(GL_COLOR_BUFFER_BIT);
 
         std::vector<std::reference_wrapper<RasterGlyph>> glyphs = FontManager::instance().getGlyphs(content_, size_);

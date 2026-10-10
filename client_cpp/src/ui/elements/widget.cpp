@@ -51,3 +51,29 @@ void Widget::recreateFbo() {
     texture_ = 0;
     initFbo();
 }
+
+void Widget::setHovered(bool v) {
+    if (hovered_ != v) {
+        hovered_ = v;
+        markDirty();
+    }
+}
+
+void Widget::calcAbs(int parent_abs_x, int parent_abs_y) {
+    abs_x_ = parent_abs_x + x_;
+    abs_y_ = parent_abs_y + y_;
+
+    for (uint32_t id : children_) {
+        Widget* child = heap_->get(id);
+        if (!child) continue;
+        child->calcAbs(abs_x_, abs_y_);
+    }
+}
+
+void Widget::markDirty() {
+    dirty_ = true;
+    if (parent_id != 0) {
+        Widget* parent = heap_->get(parent_id);
+        if (parent) parent->markDirty();
+    }
+}
