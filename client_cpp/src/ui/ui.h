@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/elements/widget.h"
+#include "ui/heap.h"
 
 class Ui : public Widget {
 public:
@@ -20,4 +21,9 @@ public:
     
     bool createTextures() override;
     void draw(int parent_w, int parent_h) override;    
+    void onMouseMove(int mx, int my);
+
+private:
+    Heap widgets_heap_;
+    Widget* hovered_widget_ = nullptr;
 };

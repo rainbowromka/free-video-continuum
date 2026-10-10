@@ -14,6 +14,10 @@ public:
     Window();
     ~Window();
 
+    int mouse_x_ = 0;
+    int mouse_y_ = 0;
+    bool mouse_moved_ = false;
+
     Window& setSize(int width, int height);
     Window& setTitle(const std::string& title);
     Window& setClientColor(uint8_t r, uint8_t g, uint8_t b);

@@ -4,12 +4,13 @@
 #include <glad/gl.h>
 #include <iostream>
 
-Text& Text::setContent(unsigned int size, const std::string& content) {
+Text& Text::setContent(unsigned int height, const std::string& content) {
     content_ = content;
-    height_ = size;
-    width_ = FontManager::instance().measureText(content_, height_);
-    baseLine = (height_ - FontManager::instance().max_height(height_)) / 2;
-    dirty_ = true;
+    size_ = FontManager::instance().getSize(height);
+    height_ = FontManager::instance().max_height(size_);
+    width_ = FontManager::instance().measureText(content_, size_);
+    baseLine = -FontManager::instance().descender(size_);
+    markDirty();
     return *this;
 }
 
@@ -17,7 +18,7 @@ Text& Text::setTextColor(uint8_t r, uint8_t g, uint8_t b) {
     text_r_ = r;
     text_g_ = g;
     text_b_ = b;
-    dirty_ = true;
+    markDirty();
     return *this;
 }
 
@@ -32,10 +33,11 @@ bool Text::createTextures() {
         glViewport(0, 0, width_, height_);
 
         // Фон — чёрный
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   // ← альфа 0
         glClear(GL_COLOR_BUFFER_BIT);
 
-        std::vector<std::reference_wrapper<RasterGlyph>> glyphs = FontManager::instance().getGlyphs(content_, height_);
+        std::vector<std::reference_wrapper<RasterGlyph>> glyphs = FontManager::instance().getGlyphs(content_, size_);
         int pen_x = 0;
         for (auto ref : glyphs) {
             RasterGlyph& g = ref.get();
@@ -54,7 +56,7 @@ bool Text::createTextures() {
 // void Text::drawGlyph(unsigned int tex,  int start_x, int start_y, int width, int height) {
 void Text::drawGlyph(const RasterGlyph& g, int pen_x) {
     int start_x = pen_x + g.bearing_x;
-    int top_y = g.bearing_y - baseLine;
+    int top_y = g.bearing_y + baseLine;
 
     float scale_x = float(width_) / 2.0f;
     float scale_y = float(height_) / 2.0f;

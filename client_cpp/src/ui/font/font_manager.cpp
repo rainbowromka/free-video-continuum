@@ -95,8 +95,6 @@ std::vector<std::reference_wrapper<RasterGlyph>> FontManager::getGlyphs(
         return result;        
     }
 
-    FontAtlas& atlas = getAtlas(size);
-
     // Размер задаётся один раз для всей строки
     FT_Set_Pixel_Sizes(face_, 0, size);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -109,21 +107,17 @@ std::vector<std::reference_wrapper<RasterGlyph>> FontManager::getGlyphs(
             continue;   // некорректный байт — пропускаем
         }
 
-        FT_UInt glyph_index = FT_Get_Char_Index(face_, codepoint);
-        if (glyph_index == 0) {
-            std::cerr << "[Font] No glyph for codepoint 0x"
-                    << std::hex << codepoint << std::dec << std::endl;
+        uint64_t key = (uint64_t(size) <<32) | codepoint;
+
+        auto it = glyphs_.find(key);
+        if (it != glyphs_.end()) {
+            result.push_back(it->second);
             continue;
         }
 
-        if (FT_Load_Glyph(face_, glyph_index, FT_LOAD_RENDER) != 0) {
-            std::cerr << "[Font] Failed to load/render glyph 0x"
-                    << std::hex << codepoint << std::dec << std::endl;
-            continue;
-        }
-
-        RasterGlyph& g = getGlyph(atlas, codepoint, size);
+        RasterGlyph& g = getGlyph(codepoint, size);
         result.push_back(g);
+
     }
 
     return result;
@@ -172,70 +166,126 @@ int FontManager::max_height(int size) {
     return int(asc-desc);
 }
 
+int FontManager::getSize(int height) {
+    auto it = sizeForHeightCache_.find(height);
+    if (it != sizeForHeightCache_.end()) {
+        return it->second;
+    }
+
+    int result = 1;
+    for (int size = 1; size <= 200; ++size) {
+        FT_Set_Pixel_Sizes(face_, 0, size);
+        int h = int(face_->size->metrics.ascender  >> 6)
+              - int(face_->size->metrics.descender >> 6);
+        if (h >= height) {
+            result = size;
+            break;
+        }
+    }
+
+    if (result == 200) {
+        std::cout << "[Font] size for height " << height << " not found, using max" << std::endl;
+    }
+
+    sizeForHeightCache_[height] = result;
+    return result;
+}
+
+int FontManager::descender(int size) {
+    FT_Set_Pixel_Sizes(face_, 0, size);
+    return face_->size->metrics.descender>>6;
+}
+
+void FontManager::createAtlas(FontAtlas& atlas, unsigned int size) {
+    int cell = max_height(size);
+
+    atlas.width      = cell * 18;
+    atlas.height     = cell * 18;
+    atlas.cursor_x   = 0;
+    atlas.cursor_y   = 0;
+    atlas.row_height = 0;
+
+    glGenTextures(1, &atlas.texture);
+    glBindTexture(GL_TEXTURE_2D, atlas.texture);
+
+    std::vector<uint8_t> empty(atlas.width * atlas.height, 0);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
+                 atlas.width, atlas.height, 0,
+                 GL_RED, GL_UNSIGNED_BYTE, empty.data());
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    atlas_textures_.push_back(atlas.texture);
+}
+
 FontAtlas& FontManager::getAtlas(unsigned int size) {    
-    FontAtlas& atlas = atlases_[size];
+    FontAtlas& atlas = active_atlases_[size];
 
     if (atlas.texture == 0) {
-        glGenTextures(1, &atlas.texture);
-        glBindTexture(GL_TEXTURE_2D, atlas.texture);
-
-        const int ATLAS_W = 1024;
-        const int ATLAS_H = 1024;
-        std::vector<uint8_t> empty(ATLAS_W * ATLAS_H, 0);
-
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
-                     ATLAS_W, ATLAS_H, 0,
-                     GL_RED, GL_UNSIGNED_BYTE, empty.data());
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        std::cout << "[Font] Created atlas for size " << size
-                  << " texture=" << atlas.texture << std::endl;
+        createAtlas(atlas, size);
+        std::cout << "[Font] New atlas for size " << size
+                  << " " << atlas.width << "x" << atlas.height << std::endl;
     }
 
     return atlas;
 }
 
-RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigned int size)                        
+RasterGlyph& FontManager::getGlyph(uint32_t codepoint, unsigned int size)                        
 {
-    auto it = atlas.glyphs.find(codepoint);
-    if (it != atlas.glyphs.end()) {
-        return it->second;
-    }
-
-    RasterGlyph& g = atlas.glyphs[codepoint];
-
+    FontAtlas& atlas = getAtlas(size);
+    
+    // 1. Растеризуем
+    FT_Load_Glyph(face_, FT_Get_Char_Index(face_, codepoint), FT_LOAD_RENDER);
     FT_GlyphSlot slot = face_->glyph;
     int w = slot->bitmap.width;
     int h = slot->bitmap.rows;
 
+    // 2. Заполняем g — один раз, до всех манипуляций со слотом
+    RasterGlyph g;
     g.bearing_x = slot->bitmap_left;
     g.bearing_y = slot->bitmap_top;
     g.width     = w;
     g.height    = h;
     g.advance   = static_cast<int>(slot->advance.x >> 6);
 
+    // 3. Пробел — возвращаем как есть
     if (w == 0 || h == 0) {
-        return g;
+        uint64_t key = (uint64_t(size) << 32) | codepoint;
+        glyphs_[key] = g;
+        return glyphs_[key];
     }
 
+    // 4. Проверка X
     if (atlas.cursor_x + w > atlas.width) {
         atlas.cursor_x = 0;
         atlas.cursor_y += atlas.row_height;
         atlas.row_height = 0;
     }
 
+    // 5. Проверка Y — при переполнении новый атлас, перезагрузка глифа, обновление g
     if (atlas.cursor_y + h > atlas.height) {
-        std::cerr << "[Font] Atlas overflow for size " << size << std::endl;
-        return g;
+        createAtlas(atlas, size);
+
+        FT_Load_Glyph(face_, FT_Get_Char_Index(face_, codepoint), FT_LOAD_RENDER);
+        slot = face_->glyph;
+        w = slot->bitmap.width;
+        h = slot->bitmap.rows;
+
+        // переснять метрики — вдруг размер шрифта переустановился иначе
+        g.bearing_x = slot->bitmap_left;
+        g.bearing_y = slot->bitmap_top;
+        g.width     = w;
+        g.height    = h;
+        g.advance   = static_cast<int>(slot->advance.x >> 6);
     }
 
+    // 6. Позиция в атласе, UV
     int last_x = atlas.cursor_x;
     int last_y = atlas.cursor_y;
 
@@ -244,6 +294,7 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
     g.u1 = float(last_x + w) / float(atlas.width);
     g.v1 = float(last_y + h) / float(atlas.height);
 
+    // 7. Запись в атлас
     glBindTexture(GL_TEXTURE_2D, atlas.texture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexSubImage2D(GL_TEXTURE_2D, 0,
@@ -251,15 +302,40 @@ RasterGlyph& FontManager::getGlyph(FontAtlas& atlas, uint32_t codepoint, unsigne
                     w, h,
                     GL_RED, GL_UNSIGNED_BYTE,
                     slot->bitmap.buffer);
-
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    // 8. Сдвиг курсора
     atlas.cursor_x += w;
     if (h > atlas.row_height) {
         atlas.row_height = h;
     }
-
+    
     g.texture = atlas.texture;
 
-    return g;
+    // 9. В мапу
+    uint64_t key = (uint64_t(size) << 32) | codepoint;
+    glyphs_[key] = g;
+    return glyphs_[key];
+}
+
+void FontManager::shutdown() {
+    for (unsigned int tex : atlas_textures_) {
+        if (tex != 0) {
+            glDeleteTextures(1, &tex);
+        }
+    }
+    atlas_textures_.clear();
+    active_atlases_.clear();
+    glyphs_.clear();
+
+    if (face_) {
+        FT_Done_Face(face_);
+        face_ = nullptr;
+    }
+    if (library_) {
+        FT_Done_FreeType(library_);
+        library_ = nullptr;
+    }
+
+    std::cout << "[Font] Shutdown complete" << std::endl;
 }

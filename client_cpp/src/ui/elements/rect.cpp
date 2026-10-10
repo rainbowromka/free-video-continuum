@@ -1,3 +1,4 @@
+#include <iostream>
 #include "ui/elements/rect.h"
 #include "ui/render/renderer.h"
 #include <glad/gl.h>
@@ -6,13 +7,15 @@ Rect& Rect::setRect(int x, int y, int width, int height) {
     if (x_ != x || y_ != y) {
         x_ = x;
         y_ = y;
-        dirty_ = true;
+        default_prop_ = false;
+        markDirty();
     }
     if (width_ != width || height_ != height) {
         width_ = width;
         height_ = height;
         recreateFbo();
-        dirty_ = true;
+        default_prop_ = false;        
+        markDirty();
     }
 
     return *this;
@@ -23,7 +26,8 @@ Rect& Rect::setColor(uint8_t r, uint8_t g, uint8_t b) {
         bg_r_ = r;
         bg_g_ = g;
         bg_b_ = b;
-        dirty_ = true;
+        default_prop_ = false;        
+        markDirty();
     }
     return *this;
 }
@@ -32,17 +36,30 @@ bool Rect::createTextures() {
     lazyInit();    
     bool was_dirty = dirty_;
 
-    for (auto& child : children_) {
+    for (uint32_t id : children_) {
+        Widget* child = heap_->get(id);
+
         was_dirty |= child->createTextures();
     }
 
     if (was_dirty) {
         glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
         glViewport(0, 0, width_, height_);
-        glClearColor(bg_r_ / 255.0f, bg_g_ / 255.0f, bg_b_ / 255.0f, 1.0f);
+
+        uint8_t r = bg_r_, g = bg_g_, b = bg_b_;
+        if (hovered_) {
+            r = hover_bg_r_;
+            g = hover_bg_g_;
+            b = hover_bg_b_;
+        }
+
+        glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        for (auto& child : children_) {
+        for (uint32_t id : children_) {
+            Widget* child = heap_->get(id);
+            if (!child) continue;
+            
             child->draw(width_, height_);
         }
 
